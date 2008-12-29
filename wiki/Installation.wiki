@@ -14,16 +14,16 @@ I don't take responsibility for any unwanted effects of following this instructi
 
 = Details =
 
-#You've got to get your phone hacked, so that idealist can use all the capabilities  of your symbian device. 
+ #You've got to get your phone hacked, so that idealist can use all the capabilities  of your symbian device. 
 
-#Install PyS60
+ #Install PyS60
 
-#Unrar IdeaList.rar
+ #Unrar IdeaList.rar
 
-#Install Idealist.sis. 
+ #Install Idealist.sis. 
 
-#Send root.rar to your phone memory and extract it (using Xplore for example) to your C:  overwritting all the files.
+ #Send root.rar to your phone memory and extract it (using Xplore for example) to your C:  overwritting all the files.
 
-#Run Idealist
+ #Run Idealist
 
 It needs so much efford to install, because basicly I don't have money to pay for the developer certificate.
