@@ -4,10 +4,10 @@ I don't take responsibility for any unwanted effects of following this instructi
 
 == Requierements ==
 
- *S60v3 Nokia device (not known if it would work on other devices)
- *PyS60 1.38 and higher (currently IdeaList doesn't seem to work with 1.9 version)
- *Hacked symbian system.
- *IdeaList.rar package
+ * S60v3 Nokia device (not known if it would work on other devices)
+ * PyS60 1.38 and higher (currently IdeaList doesn't seem to work with 1.9 version)
+ * Hacked symbian system.
+ * IdeaList.rar package
 
 == Details ==
 
