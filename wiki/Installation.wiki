@@ -14,8 +14,8 @@ I don't take responsibility for any unwanted effects of following this instructi
  # You've got to get your phone hacked, so that idealist can use all the capabilities  of your symbian device. 
  # Install PyS60
  # Unrar IdeaList.rar
- # Install Idealist.sis. 
- # Send root.rar to your phone memory and extract it (using Xplore for example) to your C:  overwritting all the files.
+ # Install Idealist.sis on C: drive
+ # Send root.rar to your phone memory and extract it (using Xplore for example) to your C:  drive, overwritting all the files.
  # Run Idealist
 
 It needs so much efford to install, because basicly I don't have money to pay for the developer certificate.
