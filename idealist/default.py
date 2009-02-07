@@ -1,11 +1,31 @@
 import appuifw2
 
-import e32, key_codes, graphics, time, calendar, miso, e32db, contacts, globalui, messaging, math, sysinfo, xprofile, logs, inbox, sysinfo, urllib
+import e32, key_codes, graphics, time, calendar, miso, e32db, contacts, globalui, messaging, math, sysinfo, xprofile, logs, inbox, sysinfo, urllib, envy, thread
 
 from e32db import format_time
 from akntextutils import wrap_text_to_array
 
 import cerealizer as pickle
+
+try:
+    envy.set_app_system(1)
+except: 
+    appuifw2.note(u"Can't set a system app status!");
+
+###### Sostituisci questa funzione con quello che vuoi fare eseguire
+#lockTHR = thread.allocate_lock()
+#i = 0
+#def funzDaemon():
+#	global i
+#	while(1):
+#		lockTHR.acquire()
+#		e32.ao_sleep(1)
+#		open('E:\\Others\\tmp.txt', 'a').write(str(i)+"\n")
+#		i+=1
+#		lockTHR.release()
+#thread.start_new_thread(funzDaemon, ())
+####################################################################
+
 
 xprof=0
 
@@ -56,7 +76,7 @@ mode=0
 exploremode=1
 whichnew=3
 zoom=0
-ideacat=[[u'Temp',(220,220,220)],[u'School',(200,200,70)],[u'Work',(200,200,70)],[u'Science',(220,70,200)],[u'Physical Exercise',(100,70,100)],[u'Meeting',(70,100,100)],[u'Relax',(100,70,70)],[u'Meal',(80,80,80)],[u'Cleanings',(90,90,90)]]
+ideacat=[[u'Temp',(220,220,220)],[u'School',(200,200,70)],[u'Work',(200,200,70)],[u'Science',(220,70,200)],[u'Physical Exercise',(100,70,100)],[u'Meeting',(70,100,100)],[u'Relax',(100,70,70)],[u'Shoping',(80,80,80)],[u'Cleanings',(90,90,90)]]
 cati=len(ideacat)
 path='C:\\idealist\\ideas.txt'
 #Initialize the reading ideas from file
@@ -741,8 +761,6 @@ def newevent():
         draw_rectangle(dlist)
     else:
         appuifw2.app.screen='full'
-def newbirthday():
-    pass
 
 def newreminder():
     global exploremode, input, viewday, hline, remindinfo
@@ -2748,10 +2766,11 @@ def watchout():
             smslist.sort()
             pickle.dump(smslist,open('C:\\idealist\\smses.txt','w'))
     try:
-        if wlist!=[] and int(wlist[0][1]/60)==int(time.time()/60) and (int(wlist[0][4])==1):
+        #globalui.global_note(unicode(str(wlist[0])))
+        if wlist!=[] and int(wlist[0][1]/60)==int(time.time()/60) and (int(wlist[0][4])%2==1):
             xprofile.set_ap(0)
             del wlist[0]
-        if wlist!=[] and int(wlist[0][0]/60)==int(time.time()/60) and (int(wlist[0][4])==1):
+        if wlist!=[] and int(wlist[0][0]/60)==int(time.time()/60) and (int(wlist[0][4])%2==1):
             xprofile.set_ap(1)
         
     except:
