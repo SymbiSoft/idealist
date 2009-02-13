@@ -108,6 +108,21 @@ inHand=0
 
 timer=e32.Ao_timer()
 
+#################################
+#mode     #
+#0        # normal
+#1        # edit: move
+#2        # edit: change order
+#3        # edit: adjust
+
+#################################
+#inHand   #
+#-2       # add new event
+#-1       # add/edit message
+# 0       # normal mode
+# 1       # add/edit anniversary
+# 2       # add/edit reminder
+
 ideacat=[[u'Temp',(220,220,220)],[u'School',(200,200,70)],[u'Work',(200,200,70)],[u'Science',(220,70,200)],[u'Physical Exercise',(100,70,100)],[u'Meeting',(70,100,100)],[u'Relax',(100,70,70)],[u'Shoping',(80,80,80)],[u'Cleanings',(90,90,90)]]
 cati=len(ideacat)
 path='C:\\idealist\\ideas.txt'
@@ -118,6 +133,7 @@ anychange=0
 alarm = 1
 #A variable for mode=2 event
 eventCopy=0
+eventsEmpty=[]
 otherday=0
 savelist=[]
 hline=0
@@ -474,6 +490,97 @@ def buildRepeat(start, edit=0):
         repeat={"type":posibles[a],"days":replist,"exceptions":exclist,"start":start,"end":d,"interval":b}
     return repeat
 
+def putIt():
+    global ideacat, cati, inHand, c1, eventsEmpty
+    which2=appuifw2.app.body.current()
+    if cati==len(ideacat):
+        c1=appuifw2.app.body.current()
+    else:
+        c1=0
+        for i in ideas:
+            if int(i[4])==int(cati):
+                which2-=1
+            c1+=1
+            if which2==-1:
+                break
+        if which2!=-1:
+            return 0
+    c3=[u"Let me choose",u"Closest free time"]
+    c2 = appuifw2.popup_menu(c3, u"Put it:") 
+    if c2==0:
+        c1=appuifw2.app.body.current()
+        appuifw2.app.left_navi_arrow=False
+        appuifw2.app.right_navi_arrow=False
+        appuifw2.app.menu_key_handler=None
+        appuifw2.app.menu_key_text=u'Options'
+        predraw()
+        buildcanvas('Landscape')
+        gradient()
+        draw(events)
+        drawSms()
+        eventsSpace(events)
+        if eventsEmpty==[]:
+            appuifw2.note(u"It's a past day, can't insert it here")
+        inHand=2
+    if c2==1:
+        eventsSpace(events)
+        for i in eventsEmpty:
+            if viewday+i[2]*3600+i[3]*60>time.time():
+                if viewday+i[0]*3600+i[1]*60<time.time():
+                    if viewday+i[2]*3600+i[3]*60-time.time()>=ideas[c1][1]:
+                        i[0]=int((time.time()-viewday)/3600)
+                        i[1]=int(((time.time()-viewday)/60)%60)
+                        make_event(ideas[c1],i,1)
+                        del ideas[c1]
+                        return 0
+                    continue
+                elif i[2]*3600+i[3]*60-i[0]*3600+i[1]*60>=ideas[c1][1]:
+                    make_event(ideas[c1],i,1)
+                    del ideas[c1]
+                    return 0
+            continue
+        appuifw2.note(u"Sorry, no free space available on this day")
+        
+#Prepare a list of empty spaces [From events list creates eventsEmpty]
+def eventsSpace(events):
+    global eventsEmpty, hstart, hstop, viewday
+    #Checking if day is totaly free
+    if events==[[]]:
+        #If time now is below the time schedule
+        if time.time()-hstart*3600<viewday:
+            eventsEmpty=[[hstart,0,hstop,0,unicode(str((hstop-hstart)*60)), u" minutes", 0, (hstop-hstart)*60]]
+        #When time is somewhere in the middle
+        elif time.time()>viewday+hstop*3600:
+            eventsEmpty=[[hstart,0,hstop,0,unicode(str((hstop-hstart)*60)), u" minutes", 0, (hstop-hstart)*60]]
+        else:
+            eventsEmpty=[[hstart,0,int((time.time()-viewday)/3600),int(((time.time()-viewday)%3600)/60),unicode(int((time.time()-hstart*3600-viewday)/60+((time.time()-viewday)%3600)/60)), u" minutes", 0, int((time.time()-hstart*3600-viewday)/60+((time.time()-viewday)%3600)/60) ], [int((time.time()-viewday)/3600),int(((time.time()-viewday)%3600)/60),hstop,0,unicode(int((hstop*3600-time.time()+viewday)/60+((time.time()-viewday)%3600)/60)), u" minutes", 0, int((hstop*3600-time.time()+viewday)/60+((time.time()-viewday)%3600)/60)]]
+    else:
+        eventsEmpty=[]
+        varr=[hstart,0]
+        #Usual, unempty day
+        #A loop over all events in the prepare() day
+        for i in events:
+            #If time is below the timetable current loop event
+            if (time.time()<=(viewday+ i[0]*3600 + i[1]*60)):
+                #If it's below the previous event end
+                if (time.time() <= (viewday+ varr[0]*3600 + varr[1]*60)):
+                    dif=i[1]+(i[0]*60)-varr[0]*60-varr[1]
+                    if (dif>0):
+                        eventsEmpty.extend([[varr[0],varr[1],i[0],i[1],unicode(str(dif)),u" minutes",i[-1],dif]])
+                #And if it's not
+                else:                    
+                    eventsEmpty.extend([[int((time.time()-viewday)/3600),int(((time.time()-viewday)%3600)/60),i[0],i[1],unicode(int((viewday+i[0]*3600+i[1]*60-time.time())/60)), u" minutes", i[-1], int((viewday+i[0]*3600+i[1]*60-time.time())/60)]])
+            else:
+                eventsEmpty.extend([[varr[0],varr[1],i[0],i[1],unicode(str(i[1]+(i[0]*60)-varr[0]*60-varr[1])), u" minutes", i[-1],unicode(str(i[1]+(i[0]*60)-varr[0]*60-varr[1])) ]])
+            varr=[i[2],i[3]]
+        #If time is smaller than last event end time (the absence of = makes it imposible to insert something on hstop hour)
+        if (time.time()<viewday+varr[0]*3600+varr[1]*60):
+           eventsEmpty.extend([[varr[0],varr[1],hstop,0, unicode(hstop*60-varr[0]*60-varr[1]),u" minutes",0,hstop*60-varr[0]*60-varr[1]]])
+        #If it's between the last event ending and the hstop hour
+        elif (time.time()<viewday+hstop*3600):
+            eventsEmpty.extend([[int((time.time()-viewday)/3600),int(((time.time()-viewday)%3600))/60,hstop,0, unicode(int(hstop*3600-time.time()+viewday)/60),u" minutes",0,int(hstop*3600-time.time()+viewday)/60]])
+
+
 def makeEvent(idea,space, ok=0):
     #This function creates an event in standard calendar using given idea and space, optional options like spliting will be added soon
     global viewday, ideacat, alarm, c1
@@ -549,13 +656,17 @@ def editevent():
     drawRectangle(events)
 
 def newEvent():
-    global events, inHand, c1, eventCopy, hstop, hstart, mode, dlist, selected
+    global events, inHand, eventCopy, hstop, hstart, mode, eventsEmpty, selected, eventCopy, alarm
     a=appuifw2.query(u"Event name:",'text')
     if (a!="" and a!=None):
+        eventCopy= a
+        eventsSpace(events)
         selected=0
-        inHand=0
+        inHand=-2
+        gradient()
         draw(events)
-        drawHalf()
+        drawRectangle(eventsEmpty)
+        
 
 def newReminder():
     global inHand, events, viewday, hline, remindinfo
@@ -569,13 +680,14 @@ def newReminder():
         b.commit()
         appuifw2.note(u"New reminder succesfuly added")
         prepare(viewday)
-        inHand = 1
-        draw(events)
-        drawRectangle(events)
-    else:
-        inHand=1
+    else:       
         appuifw2.note(u"Adding canceled")
+    inHand=0
     drawSms()
+    gradient()
+    draw(events)
+    drawRectangle(events)
+    drawSignal()
     remindinfo=u""
 
 
@@ -608,7 +720,9 @@ def newMessage():
                 appuifw2.note(u"The contact doesn't contain a mobile phone number!")
         appuifw2.app.screen='full'
         predraw()
-        buildCanvas('Landscape')
+        buildCanvas()
+        gradient()
+        draw(events)
         drawSms()
         handleRedraw(None)
     messageinfo=u""
@@ -630,12 +744,14 @@ def newAnniversary(str=0):
         b.commit()
         appuifw2.note(u"New anniversary succesfuly added")
         prepare(viewday)
-        inHand = 1
-        draw(events)
-        drawRectangle(events)
-        return 0
-    inHand=1
-    appuifw2.note(u"Adding canceled")
+    else:
+        appuifw2.note(u"Adding canceled")
+    inHand=0
+    gradient()
+    draw(events)
+    drawRectangle(events)
+    drawSms()
+    drawSignal()
         
 def overwrite(michal=-2):
     global events, selected, start, viewday
@@ -747,7 +863,7 @@ def delEvent(sel):
         else:
             return 0
     else:
-        yesno=appuifw2.query(u"Do you want to remove event "+ events[sel][4],"query")
+        yesno=appuifw2.query(u"Remove event "+ events[sel][4],"query")
         if yesno:
             b.__delitem__(events[sel][-1])
             del events[sel]
@@ -757,7 +873,7 @@ def delEvent(sel):
 
 
 def move(time):
-    global events, selected, hstop, hstart, anychange, savelist, inHand, eventCopy, anychange, viewday, mode, start
+    global events, selected, hstop, hstart, anychange, savelist, inHand, eventCopy, anychange, viewday, mode, start, eventsEmpty, hline
     if inHand==0:
         if mode == 0:
             if time>0:
@@ -1001,8 +1117,28 @@ def move(time):
             hline=hstop*60
         else:
             hline+=time
-        drawHLine()
-
+        gradient()
+        draw(events)
+        drawHLine("reminder")
+    elif inHand==-1:
+        if hline+time<hstart*60:
+            hline=hstart*60
+        elif hline+time>hstop*60:
+            hline=hstop*60
+        else:
+            hline+=time
+        gradient()
+        draw(events)
+        drawHLine("message")
+        
+    elif inHand==-2:
+        if time>0:
+            selected+=1
+        else:
+            selected-=1
+        gradient()
+        draw(events)
+        drawRectangle(eventsEmpty)
 
 def idea2event(i,idea):
     global viewday, alarm
@@ -1056,7 +1192,7 @@ def handleRedraw(rect):
     if img: canvas.blit(img)
 
 def quickEdit():
-    global selected, inHand, viewday, events, mode, start, colors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, dlist, remind, smslist, messageinfo, remindinfo, annivs, annivsinfo, base, ideabox, missedcalls, unreadsms,weekday, menu, alarm
+    global selected, inHand, viewday, events, mode, start, colors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, eventsEmpty, remind, smslist, messageinfo, remindinfo, annivs, annivsinfo, base, ideabox, missedcalls, unreadsms,weekday, menu, alarm
     b=calendar.open()
     alarminfo=None
     try:
@@ -1341,6 +1477,7 @@ def quickEdit():
         editevent()
 
 def menuUp():
+    global menu
     menu=0
     choices = [u"Custom Event", u"Reminder", u"Anniversary", u"Message"]
     gradient()
@@ -1362,7 +1499,7 @@ def menuUp():
         else:
             hline=((hstop-hstart)/2+hstart)*60
         draw(events)
-        drawHLine()
+        drawHLine("reminder")
         drawSms()
         handleRedraw(None)
     elif index == 2: 
@@ -1373,17 +1510,17 @@ def menuUp():
     elif index == 3:
         selected=0
         inHand=-1
-        m=1
         if viewday<=time.time() and time.time()<=viewday+3600*24:
             hline=(time.time()-viewday)/60+30
         else:
             hline=((hstop-hstart)/2+hstart)*60
         draw(events)
-        drawHLine()
+        drawHLine("message")
         handleRedraw(None)
     return 0
 
 def menuDown():
+    global alarm, events, menu
     if alarm:
         label=u"Turn Auto add alarm OFF"
     else:
@@ -1425,9 +1562,10 @@ def menuDown():
         quit()
     return 0
 def menuLeft():
+    global menu
     menu=0
     appuifw2.app.screen='normal'
-    nana=appuifw2.Listbox(ideasnames(),putit)
+    nana=appuifw2.Listbox(ideasnames(),putIt)
     nana.bind(key_codes.EKeyBackspace,delidea)
     nana.bind(key_codes.EKeyYes,editIdea)
     nana.bind(key_codes.EKeyLeftArrow,cleft)
@@ -1444,6 +1582,7 @@ def menuLeft():
     appuifw2.app.menu_key_handler=newidea
     return 0
 def menuRight():
+    global menu
     menu=0
     try:
         del ideabox
@@ -1452,6 +1591,7 @@ def menuRight():
     ideabox = Ideabox()
     return 0
 def menuMiddle():
+    global menu, remind, hline, remindinfo, inHand, mode
     menu=0
     choices = [u"This Event",u"Reminder",u"Anniversary", u"Message"]
     gradient()
@@ -1473,14 +1613,14 @@ def menuMiddle():
                 a=calendar.open()
                 a.__delitem__(remind[c1][-1])
                 hline=remind[c1][0]*60+remind[c1][1]
-                selected=-1
                 remindinfo=unicode(remind[c1][2])
                 del remind[c1]
-                drawSms()
                 selected=0
-                inHand=-1
+                inHand=2
+                gradient()
+                draw(events)
                 drawSms()
-                drawHLine()
+                drawHLine("reminder")
                 handleRedraw(None)
     elif index == 3:
         sms=[]
@@ -1492,7 +1632,6 @@ def menuMiddle():
             c1 = appuifw2.popup_menu(sms,u"Sms list:")
             if c1!=None:
                 hline=(smslist[c1][0]-viewday)/60
-                m=1
                 selected=0
                 messageinfo=unicode(smslist[c1][2])
                 del smslist[c1]
@@ -1500,8 +1639,10 @@ def menuMiddle():
                 pickle.dump(smslist,open('C:\\idealist\\smses.txt','w'))
                 selected=0
                 inHand=-1
+                gradient()
+                draw(events)
                 drawSms()
-                drawHLine()
+                drawHLine("message")
                 handleRedraw(None)
     elif index == 2: 
         if annivs!=[]:
@@ -1510,22 +1651,56 @@ def menuMiddle():
                 names.extend([i[0]])
             c1 = appuifw2.popup_menu(names,u"Anniversary:")
             if c1!=None:
-                inHand=0
+                inHand=1
                 appuifw2.note(u"Choose the day")
                 annivsinfo=unicode(annivs[c1][0])
                 a=calendar.open()
                 a.__delitem__(int(annivs[c1][1]))
                 del annivs[c1]
+                gradient()
+                draw(events)
                 draw(events)
                 drawSms()
                 handleRedraw(None)
     return 0
 
 
-
+def checkAndAdd():
+    global eventCopy, selected, inHand, events, viewday, mode, eventsEmpty, ideacat
+    b=calendar.open()
+    c=b.add_appointment()
+    c.content=eventCopy
+    
+    b=[]
+    for i in ideacat:
+        b.extend([unicode(i[0])])
+        
+    category=appuifw2.popup_menu(b,u"Choose a category")
+    if category!=None:
+        c.location=category
+    else:
+        c.location=0
+    start=eventsEmpty[selected][0]*3600+eventsEmpty[selected][1]*60
+    end=eventsEmpty[selected][2]*3600+eventsEmpty[selected][3]*60
+    if (end -start)>3600:
+        much=(end-start-3600)/2
+        start+=much
+        end-=much
+    c.set_time(viewday + start,viewday+end)
+    c.commit()
+    prepare(viewday)
+    gradient()
+    drawSms()
+    #if (viewday + start>=time.time()):
+    #    selected+=1
+    inHand=0
+    mode=3
+    drawSignal()
+    draw(events)
+    drawAdjust()
 #This thing handles buttons which are being clicked
 def handleEvent(event):
-    global selected, ideas,inHand, viewday, events, mode, start, colors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, dlist, remind, smslist, messageinfo, remindinfo, annivs, annivsinfo, base, ideabox, missedcalls, unreadsms,weekday, menu, alarm, screenObj, onstandby
+    global selected, ideas,inHand, viewday, events, mode, start, clors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, eventsEmpty, remind, smslist, messageinfo, remindinfo, annivs, annivsinfo, base, ideabox, missedcalls, unreadsms,weekday, menu, alarm, screenObj, onstandby
     ev = event['keycode']
     pi = event['scancode']
 #This part in part used to be a redraw triggerer in past - not needed anymore
@@ -1549,8 +1724,8 @@ def handleEvent(event):
                 draw(events)
                 drawHalf()
     
-    elif ev == key_codes.EKey1 and mode!=3:
-        if mode==0 or mode==1 or inHand==0 or inHand==2 or inHand==-1:
+    elif ev == key_codes.EKey1:
+        if mode==0 or mode==1:
             a=appuifw2.query(u"Go to:", 'date', viewday)
             if viewday!=a and a!=None:
                 weekday+=int((a-viewday)/86400)
@@ -1560,15 +1735,55 @@ def handleEvent(event):
                 gradient()
                 draw(events)
                 drawSms()
+                drawSignal()
                 if mode==1:
                     anychange = 1
                     drawHalf()
                 elif inHand==-1:
-                    drawHLine()
-                elif mode==0:
+                    drawHLine("message")
+                elif inHand==2:
+                    drawHLine("reminder")
+                elif inHand==-2:
+                    eventsSpace(events)
+                    drawRectangle(eventsEmpty)
+                elif inHand==0:
                     drawRectangle(events)
+        return 0
                 
+    elif ev == key_codes.EKey3 and inHand==0 and mode==0:
+        newEvent()
+        return 0
+        
+    elif ev == key_codes.EKey6 and inHand==0 and mode==0:
+        inHand=2
+        gradient()
+        draw(events)
+        current=time.time()-viewday
+        if current>0 and current<3600*24:
+            hline=(time.time()-viewday)/60 + 30
+        else:
+            hline=(hstart*60+(hstop-hstart)*30)
+        drawHLine("reminder")
+        return 0
+        
+    elif ev == key_codes.EKey9 and inHand==0 and mode==0:
+        inHand=1
+        gradient()
+        draw(events)
+        return 0
     
+    elif ev==key_codes.EKeyHash and inHand==0 and mode==0:
+        inHand=-1
+        gradient()
+        draw(events)
+        current=time.time()-viewday
+        if current>0 and current<3600*24:
+            hline=(time.time()-viewday)/60 + 30
+        else:
+            hline=(hstart*60+(hstop-hstart)*30)
+        drawHLine("message")
+        return 0
+        
     elif ev == key_codes.EKeyUpArrow:
         if menu:
             menuUp()
@@ -1601,13 +1816,17 @@ def handleEvent(event):
     elif ev == key_codes.EKeySelect:
         if menu:
             menuMiddle()
-        
         elif inHand==-1:
-            if m:
-                newMessage()
-                m=0
+            newMessage()
+        elif inHand==-2:
+            if eventsEmpty==[]:
+                appuifw2.note(u"There's nothing to choose from at this day")
+                inHand=0
             else:
-                newReminder()
+                checkAndAdd()
+        elif inHand==2:
+            newReminder()
+            
         elif inHand==0:
             #Pretty much awesome function!
             if mode==0 and events[selected]!=[]:
@@ -1769,7 +1988,6 @@ def handleEvent(event):
     elif ev == key_codes.EKeyLeftArrow:
         if menu:
             menuLeft()
-            
         
         elif inHand==0:
             if mode==0:
@@ -1816,6 +2034,16 @@ def handleEvent(event):
                 drawSignal()
                 drawAdjust()
 
+        elif inHand==2:
+            viewday-=3600*24
+            weekday-=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            draw(events)
+            drawHLine("reminder")
+            drawSms()
+            drawSignal()
         elif inHand==-1:
             viewday-=3600*24
             weekday-=1
@@ -1823,10 +2051,30 @@ def handleEvent(event):
             prepare(viewday)
             gradient()
             draw(events)
-            drawHLine()
+            drawHLine("message")
             drawSms()
             drawSignal()
-            
+        
+        elif inHand==-2:
+            viewday-=3600*24
+            weekday-=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            eventsSpace(events)
+            draw(events)
+            drawRectangle(eventsEmpty)
+            drawSms()
+            drawSignal()
+        elif inHand==1:
+            viewday-=3600*24
+            weekday-=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            draw(events)
+            drawSms()
+            drawSignal()
 
         
             
@@ -1880,6 +2128,17 @@ def handleEvent(event):
                 drawSignal()
                 drawAdjust()
 
+        elif inHand==2:
+            viewday+=3600*24
+            weekday+=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            draw(events)
+            drawHLine("reminder")
+            drawSms()
+            drawSignal()
+        
         elif inHand==-1:
             viewday+=3600*24
             weekday+=1
@@ -1887,12 +2146,32 @@ def handleEvent(event):
             prepare(viewday)
             gradient()
             draw(events)
-            drawHLine()
+            drawHLine("message")
             drawSms()
             drawSignal()
-            
+        
+        elif inHand==-2:
+            viewday+=3600*24
+            weekday+=1
+            weekday=weekday%7
+            prepare(viewday)
+            eventsSpace(events)
+            gradient()
+            draw(events)
+            drawRectangle(eventsEmpty)
+            drawSms()
+            drawSignal()
+        elif inHand==1:
+            viewday+=3600*24
+            weekday+=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            draw(events)
+            drawSms()
+            drawSignal()    
    
-    elif ev== key_codes.EKeyYes and inHand==1 and selected !=-1:
+    elif ev== key_codes.EKeyYes and inHand==0:
         quickEdit()
 
     #Deletes an event from the calendar
@@ -1990,7 +2269,7 @@ def drawOnStandby():
             
 def watchout():
     #Timer function
-    global events, wlist, img, currentday, smslist,w, h,missedcalls, inboxx,currentfont, unreadsms, phone, message, xprof, menu, mode
+    global events, wlist, img, currentday, smslist,w, h,missedcalls, inboxx,currentfont, unreadsms, phone, message, xprof, menu, mode, eventsEmpty
     #gradient()
     #while(0):
     e32.ao_yield()
@@ -2035,9 +2314,10 @@ def watchout():
         missedcalls=1
     else:
         missedcalls=0
+
     del l
     xprof=xprofile.get_ap()[0]
-    
+    gradient()
     draw(events)
     drawSignal()
     if menu:
@@ -2051,7 +2331,11 @@ def watchout():
     elif inHand==1:
         pass
     elif inHand==2:
-        drawHLine()
+        drawHLine("reminder")
+    elif inHand==-2:
+        drawRectangle(eventsEmpty)
+    elif inHand==-1:
+        drawHLine("message")
     else:
         drawRectangle(events)
     handleRedraw(None)
@@ -2079,8 +2363,12 @@ def quit():
         drawSignal()
         handleRedraw(None)
         return 0
-    elif inHand == 2 or inHand==-1:
+    elif appuifw2.app.screen != 'full':
+        predraw()
+        buildCanvas()
+    elif inHand == 2 or inHand==-1 or inHand==-2 or inHand==1:
         inHand =0
+        appuifw2.note(u"Deleted.")
         prepare(viewday)
         gradient()
         draw(events)
@@ -2088,16 +2376,7 @@ def quit():
         drawSms()
         drawSignal()
         handleRedraw(None)
-    elif inHand==1:
-        inHand =0
-        appuifw2.note(u"Anniversery deleted.")
-        prepare(viewday)
-        gradient()
-        draw(events)
-        drawRectangle(events)
-        drawSms()
-        drawSignal()
-        handleRedraw(None)
+        return 0
     elif (mode==1 or mode == 2 or mode==3):
         mode=0
         prepare(viewday)
@@ -2108,6 +2387,7 @@ def quit():
         drawSignal()
         handleRedraw(None)
         anychange=0
+        return 0
     else:
         try:
             saveconfig()
@@ -2125,7 +2405,8 @@ def quit():
         #appuifw2.app.set_exit()
         try:
             #envy.is_app_system(0)
-            appuifw2.app.set_exit()
+            if (appswitch.fg_appname()==u'IdeaList'):
+                appuifw2.app.set_exit()
             app_lock.signal()
         except:
             appufiw2.note(u"Now you have to kill idealist ;]")
@@ -2211,7 +2492,11 @@ def catconfig():
     appuifw2.app.screen='full'
     
 def mainMenu():
-    global currentfont, w, h, menu
+    global currentfont, w, h, menu, events
+    gradient()
+    draw(events)
+    drawSms()
+    drawSignal()
     img.polygon((40,h/2,w/2,h/2-w/2+40,w-40,h/2,w/2,h/2+w/2-40),fill=(0,0,0), outline=(200,200,200), width=4)
     img.rectangle((20+w/4,h/2-w/4+20,w-20-w/4,h/2+w/4-20),outline=(200,200,200), width=4)
     img.text((w/2-12,h/2+5),u"Edit",fill=(255,255,255), font=currentfont)
@@ -2229,7 +2514,7 @@ def shortcuts():
     appuifw2.app.screen='normal'
     appuifw2.app.body=shortk
 
-def buildCanvas(strs):
+def buildCanvas():
     global w,h, img, canvas, selected
     appuifw2.app.screen = 'full'
     appuifw2.app.menu_key_handler = mainMenu
@@ -2248,7 +2533,7 @@ def buildCanvas(strs):
         handleRedraw(None)
     except:
         pass
-buildCanvas('Landscape')
+buildCanvas()
 
 events=[[]]
 events=prepare(viewday)
@@ -2344,8 +2629,8 @@ def draw(list):
     #current hour line
     img.line((11,newh+((time.time()-viewday)/3600-hstart)*vadjust,w,newh+((time.time()-viewday)/3600-hstart)*vadjust), (250,50,0),width=2)
     if inHand==1:
-        img.rectangle((12,h-12,w,h),fill=(0,0,0))
-        img.text((11,h),u"Choose day by pressing select",fill=(255,255,255))    
+        img.rectangle((12,h-20,170,h-10),fill=(0,0,0))
+        img.text((11,h-10),u"Choose day by pressing select",fill=(255,255,255))    
     
         
 def drawSms():
@@ -2400,12 +2685,13 @@ def drawSignal():
     if len(minutess)==1:
         minutess="0"+minutess
     img.text((w-30,h), unicode(hourr+":"+minutess), font=currentfont ,fill=(245,245,245))
+    
     if missedcalls==1:
-        img.blit(phone, target=(w-57,h-11))
+        img.blit(phone, target=(w-57,h-10))
     if unreadsms==1:
-        img.blit(sms, target=(w-72,h-11))
+        img.blit(sms, target=(w-72,h-10))
     if xprof:
-        img.blit(silence, target=(w-42,h-11))
+        img.blit(silence, target=(w-42,h-10))
     
     all=u" " + unicode(days[weekday])
     if int(-(currentday-viewday)/(3600*24))==0:
@@ -2423,7 +2709,6 @@ def drawSignal():
 
 def drawRectangle(list):
     global selected, newh, vadjust, mode, ideacat, inHand, dish, currentfont,logo, currentfont,w
-    
     if (selected < 0):
         selected=len(list)-1
     elif (selected > int(len(list)-1)):
@@ -2497,8 +2782,8 @@ def drawAdjust():
     elif (selected > int(len(events)-1)):
         selected=0
     drawSignal()
-    img.rectangle((12,h-10,100,h),fill=(0,0,0))
-    img.text((12,h),u"Resize mode on",fill=(255,255,255))
+    img.rectangle((12,h-20,100,h-10),fill=(0,0,0))
+    img.text((12,h-10),u"Resize mode on",fill=(255,255,255))
     if start:
         img.line((12,(events[selected][2]+(events[selected][3]*1./60)-hstart)*vadjust+newh ,w,(events[selected][2]+(events[selected][3]*1./60)-hstart)*vadjust+newh ), outline = (0,150,0), width = 3)
     else:
@@ -2508,8 +2793,8 @@ def drawAdjust():
 def drawHalf():
     global eventCopy, colors, ideacat, hstart, hstop, vadjust, newh,w,h, selected, events
     drawSignal()
-    img.rectangle((12,h-10,90,h),fill=(0,0,0))
-    img.text((12,h),u"Move mode on",fill=(255,255,255))
+    img.rectangle((12,h-20,90,h-10),fill=(0,0,0))
+    img.text((12,h-10),u"Move mode on",fill=(255,255,255))
     colisions= checkColisions()
     if len(colisions)==0:
         color=colors[12]
@@ -2533,18 +2818,18 @@ def drawOutline():
     elif (selected > int(len(events)-1)):
         selected=0
     drawSignal()
-    img.rectangle((12,h-10,140,h),fill=(0,0,0))
-    img.text((12,h),u"Change order mode on",fill=(255,255,255))
+    img.rectangle((12,h-20,140,h-10),fill=(0,0,0))
+    img.text((12,h-10),u"Change order mode on",fill=(255,255,255))
     #drawRectangle(events)
     img.line((12,(events[selected][2]+(events[selected][3]*1./60)-hstart)*vadjust+newh,w,(events[selected][2]+(events[selected][3]*1./60)-hstart)*vadjust+newh), outline = colors[13], width = 3)
     img.line((12,(events[selected][0]+(events[selected][1]*1./60)-hstart)*vadjust+newh,w,(events[selected][0]+(events[selected][1]*1./60)-hstart)*vadjust+newh), outline = colors[13], width = 3)
     
     
-def drawHLine():
+def drawHLine(string):
     global events, selected, hline
     drawSignal()
-    img.rectangle((12,h-10,100,h),fill=(0,0,0))
-    img.text((12,h),u"Insert mode on",fill=(255,255,255))
+    img.rectangle((12,h-20,110,h-10),fill=(0,0,0))
+    img.text((12,h-10),u"Adding " + unicode(string) ,fill=(255,255,255))
     img.line((12,(hline-hstart*60)*vadjust/60+newh ,w,(hline-hstart*60)*vadjust/60+newh), outline = colors[8], width = 2)
     img.rectangle((w-26,(hline-hstart*60)*vadjust/60+newh-12,w,(hline-hstart*60)*vadjust/60+newh),fill=(5,5,5))
     img.text((w-26,(hline-hstart*60)*vadjust/60+newh), unicode(str(int(hline/60))+":"+str(int(hline%60))), fill=colors[8])
