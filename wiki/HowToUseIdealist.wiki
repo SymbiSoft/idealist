@@ -1,0 +1,15 @@
+#labels idealist,howtouse
+#This page has in purpose show you the basic use of idealist
+
+= Introduction =
+
+The main goal while developing idealist was to create a simple interface without any complicated menus. Here are some mobile key shortcuts.
+http://idealist.googlecode.com/svn/images/keyboard.jpg
+
+
+= Details =
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
