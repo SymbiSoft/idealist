@@ -1,4 +1,4 @@
-#labels idealist,howtouse
+#labels Featured,Phase-Design
 #This page has in purpose show you the basic use of idealist
 
 = Introduction =
