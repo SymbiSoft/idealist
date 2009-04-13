@@ -1,4 +1,4 @@
-import appuifw2, TopWindow, appswitch, keycapture
+import appuifw2, TopWindow, appswitch, keycapture, audio, socket
 
 import e32, key_codes, graphics, time, calendar, e32db, contacts, globalui, messaging, math, sysinfo, xprofile, logs, inbox, sysinfo, urllib, envy
 
@@ -10,49 +10,125 @@ import cerealizer as pickle
 try:
     envy.set_app_system(1)
 except:
-    appuifw2.note(u"Can't set a system app status!");
+    appuifw2.note(u"Can't set a system app status!")
+
+#0 
+#1 silent
+#2 alarm
+#3 alarm, silent
+
+
 
 class DrawStandby:
+    ifshown=0
     def __init__(self):
-        #self.app_lock = e32.Ao_lock()
-        #Create an instance of TopWindow
+        global wlist
         self.window = TopWindow.TopWindow()
         #Set its size
-        self.window.size = (210, 160)
+        self.window.size = (240, 160)
         #Set the position of it upper left corner
-        self.window.position = (50, 60)
-         
-        #Create a new, red image to display
-        img = graphics.Image.new((0, 0))
-        img.clear(0x000000)
-        #Write text on it
-        img.text((25, 25), u"This is a pop-up", font = 'title')
-        #Add it to the window specifying coordinates for its upper left corner
-        self.window.add_image(img, (10, 10))
+        self.window.position = (10, 40)
         #Make the window's background green
-        self.window.background_color = 0x000000
+        #self.window.background_color = 0xffffff
         #Make the corners round
-        self.window.corner_type = 'corner5'
-        #Key capture
-        capturer=keycapture.KeyCapturer(self.cb_capture)
-        capturer.keys=(keycapture.EKey1,keycapture.EKey2)
-        capturer.start()
+        #self.window.corner_type = 'corner5'
+        img1 = graphics.Image.new((self.window.size[0], 20))
+        img1.text((0,15), u"Today", 0x000000, font='title')
+        self.window.add_image(img1, (0, 0))
+        
+        img2 = graphics.Image.new((self.window.size[0], 20))
+        img2.text((0,15), u"Tomorrow", 0x000000, font='title')
+        self.window.add_image(img2, (0, 100))
+        
+        #Display the window
+        #self.window.show()
+        
+        #capturer=keycapture.KeyCapturer(self.cb_capture)
+        #capturer.keys=(keycapture.EKey1,keycapture.EKey2)
+        #capturer.start()
         #self.app_lock.wait()
     def hide(self):
         self.window.hide()
-    
+        self.ifshown=0
     def show(self):
-        (size, position) = appuifw2.app.layout(appuifw2.EWallpaperPane)
-        self.window.size = size
-        self.window.position= position
+        (size, position) = appuifw2.app.layout(appuifw2.EMainPane)
+        self.window.size = (size[0],size[1]-15)
+        self.window.position= (position[0],position[1]+15)
+        self.refresh()
         self.window.show()
+        self.ifshown=1
  
     def cb_capture(self,key):
         if(key==keycapture.EKey1):
             globalui.global_note(u"Maselko!")
         elif(key==keycapture.EKey2):
             globalui.global_note(u"prawie maslo :)")
-    
+            
+    def refresh(self):
+        global wlist, wlist2, silence
+        img = graphics.Image.new((self.window.size[0], 80))
+        img.clear(0x000000)
+        #Write text on it
+        file = open('C:\\idealist\\wlist.txt','w')
+        file.write(str(wlist))
+        file.close()
+        
+        if wlist!=[]:
+            if wlist[0][0]>=time.time():
+                img.text((10,20), unicode(wlist[0][2]), 0xffffff, font='normal')
+                img.text((25,35), unicode("begins in " +str(int((wlist[0][0]-time.time())/60)) +" minutes"), 0xdddddd, font='annotation')
+
+            elif wlist[0][1]>=time.time():
+                img.text((10,20), unicode(wlist[0][2]), 0xffffff,font='normal')
+                img.text((25,35), unicode( "working on now, ends in: " +  str(int((wlist[0][1]-time.time())/60))+ " minutes") , 0xdddddd, font='annotation')
+            else:
+                del wlist[0]
+            if wlist[0][4]%2==1:
+                    img.blit(silence, target=(2,22))   
+            if len(wlist)>1:
+                img.text((10,50), unicode(wlist[1][2]), 0xffffff, font='annotation')
+                img.text((25,65), unicode("begins in " +str(int((wlist[1][0]-time.time())/60)) + " minutes"), 0xdddddd, font='annotation')
+                if wlist[1][4]%2==1:
+                    img.blit(silence, target=(2,52))    
+        else:
+            img.text((25,25), u"Today I do whatever I want!", 0xffffff, font='normal')
+        #Add it to the window specifying coordinates for its upper left corner
+        try:
+            self.window.remove_image(img)
+        except:
+            pass
+        self.window.add_image(img, (0, 20))        
+        img3 = graphics.Image.new((self.window.size[0], 80))
+        img3.clear(0x000000)
+        if len(wlist2)>0:
+            ile=0
+            for i in wlist2:
+                ile+=1   
+                start=time.gmtime(i[0])
+                end=time.gmtime(i[1])
+                img3.text((10,ile*15), unicode(str(start[3]-start[-1])+":"+(str(start[4]),"0"+str(start[4]))[len(str(start[4]))==1] + "-"+ str(end[3]-start[-1])+":" + (str(end[4]),"0"+str(end[4]))[len(str(end[4]))==1]) +" "+ unicode(i[2]), 0xeeeeee, font='annotation')    
+                if ile==5:
+                    break
+        else:
+            img3.text((25,25), u"I do whatever I want!", 0xffffff, font='normal')
+        try:
+            self.window.remove_image(img3)
+        except:
+            pass
+        self.window.add_image(img3, (0, 120))
+            #Make the window's background green
+        #self.window.background_color = 0xffffff
+        #Add a shadow effect
+        #self.window.shadow = 4
+        #Make the corners round
+        #self.window.corner_type = 'corner5'
+         
+        #Display the window
+        #self.window.show()
+        
+        #capturer=keycapture.KeyCapturer(self.cb_capture)
+        #capturer.keys=(keycapture.EKey1,keycapture.EKey2)
+        #capturer.start()
     
 app_lock = e32.Ao_lock()
 xprof=0
@@ -68,6 +144,7 @@ message = graphics.Image.open('C:\\idealist\\message.png')
 phone = graphics.Image.open('C:\\idealist\\phone.png')
 sms = graphics.Image.open('C:\\idealist\\sms.png')
 silence = graphics.Image.open('C:\\idealist\\silence.png')
+sound = graphics.Image.open('C:\\idealist\\sound.png')
 messageinfo=u""
 remindinfo=u""
 annivsinfo=u""
@@ -92,22 +169,24 @@ exit_flag=1
 dhstart=hstart=7
 dhstop=hstop=23
 newh=14
-endh=10
+endh=13
 m=0
+snd=None
 currentfont='dense'
 missedcalls=0
 unreadsms=0
 atext=""
 #0-select mode (multiple), 1-move mode (multiple), 2-adjust mode (single)
-smslist=[]
+smsList=[]
 projects=[]
-
+recording=0
 #Two most important variables
 mode=0
 inHand=0
-
+voiceNote=None
+commingSoon=u""
 timer=e32.Ao_timer()
-
+token=''
 #################################
 #mode     #
 #0        # normal
@@ -122,7 +201,7 @@ timer=e32.Ao_timer()
 # 0       # normal mode
 # 1       # add/edit anniversary
 # 2       # add/edit reminder
-
+# 3       # add/edit voice message
 ideacat=[[u'Temp',(220,220,220)],[u'School',(200,200,70)],[u'Work',(200,200,70)],[u'Science',(220,70,200)],[u'Physical Exercise',(100,70,100)],[u'Meeting',(70,100,100)],[u'Relax',(100,70,70)],[u'Shoping',(80,80,80)],[u'Cleanings',(90,90,90)]]
 cati=len(ideacat)
 path='C:\\idealist\\ideas.txt'
@@ -141,13 +220,13 @@ c1=0
 dish=11
 #It's 1 if menu is opened
 menu=0
-screenObj=None
+wlist2=[]
 onstandby=False
 
 inboxx=inbox.Inbox()
-def saveconfig():
-    global ideacat, dhstart, dhstop, hstart, hstop, currentfont, alarm
-    tosave=[ideacat,dhstart,dhstop,currentfont, alarm]
+def saveConfig():
+    global ideacat, dhstart, dhstop, hstart, hstop, currentfont, alarm, token
+    tosave=[ideacat,dhstart,dhstop,currentfont, alarm, token]
     try:
         pickle.dump(tosave,open('C:\\idealist\\config.txt','w'))
     except:
@@ -155,7 +234,7 @@ def saveconfig():
         #appuifw2.note(u"Can't save the config file")
     
 def loadConfig():
-    global ideacat, dhstart, dhstop, hstart, hstop, currentfont, alarm
+    global ideacat, dhstart, dhstop, hstart, hstop, currentfont, alarm, token
     try:
         toload=pickle.load(open('C:\\idealist\\config.txt'))
         ideacat=toload[0]
@@ -163,22 +242,26 @@ def loadConfig():
         dhstop=hstop=toload[2]
         currentfont=toload[3]
         alarm = toload[4]
+        token=toload[5]
     except:
         #appuifw2.note(u"[First run warnings]")
         #appuifw2.note(u"Can't load the config file")
         pass
         
 loadConfig()
+
 try:
-    ideas=pickle.load(open('C:\\idealist\\ideas.txt'))
+    smsList=pickle.load(open('C:\\idealist\\smses.txt'))
 except:
-    #appuifw2.note("Can't load the ideas db")
-    pass
+    appuifw2.note(u"Can't load the planned sms db")
+
+soundList=[]
+
 try:
-    smslist=pickle.load(open('C:\\idealist\\smses.txt'))
+    soundList=pickle.load(open('C:\\idealist\\sounds.txt'))
 except:
-    #appuifw2.note("Can't load the planned sms db")
-    pass
+    appuifw2.note(u"Can't load the sound db")
+
 
 #Here we have scheme color table in the following order:
 
@@ -199,82 +282,89 @@ except:
 # 14 ORANGE
 # 15 DARK BLUE
 
-colors =[(0,200,220),(0,220,240), (0,0,0), (0,0,0),(255,255,255),(200,200,200),(0,0,0),(0,0,0),(255,255,255),(100,100,100),(220,220,220),(240,240,240),(255,0,0), (0,150,0), (150, 90, 0), (0,0,150)]
+colors =[(0,200,220),(0,220,240), (0,0,0), (0,0,0),(255,255,255),(200,200,200),(0,0,0),(0,0,0),(255,255,255),(100,100,100),(220,220,220),(240,240,240),(150,0,0), (0,150,0), (150, 90, 0), (0,0,150)]
 
-ideabox=[]
+todo=None
 def loadBase():
     global base
     try:
-        cyk=pickle.load(open('C:\\idealist\\ideabox.txt'))
+        cyk=pickle.load(open('C:\\idealist\\todo.txt'))
         base=[]
         for i in range(0,len(cyk)):
             base+=[[]]
-            for j in range(0,len(cyk[i])):
-                if j==0:
-                    base[i]+=[cyk[i][j]]
-                else:
-                    base[i]+=[[]]
-                    base[i][j]=appuifw2.Item(cyk[i][j][0])
-                    base[i][j].marked=cyk[i][j][1]
+            base[i]+=[cyk[i][0]]
+            for j in range(1,len(cyk[i])):
+                base[i]+=[[]]
+                try:
+                    base[i][j]=appuifw2.Item(cyk[i][j][0], id=cyk[i][j][2], priority=cyk[i][j][3], icon=appuifw2.Icon(u'C:\\idealist\\icons.mbm',int(cyk[i][j][3]),0))
+                except:
+                    base[i][j]=appuifw2.Item(cyk[i][j][0], id=None, priority=cyk[i][j][3], icon=appuifw2.Icon(u'C:\\idealist\\icons.mbm',int(cyk[i][j][3]),0))
+                base[i][j].marked=cyk[i][j][1]
     except:
-        #appuifw2.note(u"Cannot load IdeaBox file!")
+        #appuifw2.note(u"Cannot load Todo file!")
         base=[[[]]]
         pass
     
 loadBase()
 
-def savebase():
+def saveBase():
     global base
     tosave=[]
     for i in range(0,len(base)):
         tosave += [[]]
-        for j in range(0,len(base[i])):
-            if j==0:
-                tosave[i]+=[base[i][j]]
-            else:
-                try:
-                    tosave[i]+=[[base[i][j].title,base[i][j].marked]]
-                except:
-                    tosave[i]+=[[base[i][j].title,False]]
+        tosave[i]+=[base[i][0]]
+        for j in range(1,len(base[i])):
+            try:
+                tosave[i]+=[[base[i][j].title,base[i][j].marked,base[i][j].id,base[i][j].priority]]
+            except:
+                tosave[i]+=[[base[i][j].title,base[i][j].marked,False,base[i][j].priority]]
     try:
-        pickle.dump(tosave,open('C:\\idealist\\ideabox.txt','w'))
+        pickle.dump(tosave,open('C:\\idealist\\todo.txt','w'))
+        #This is unnecessary:
+        file = open('C:\\idealist\\todo2.txt','w')
+        file.write(str(tosave))
+        file.close()
     except:
-        appuifw2.note(u"Cannot save the Ideabox file")
+        appuifw2.note(u"Cannot save the Todo file")
     
 
-class Ideabox:
-    global base
-    
+class Todo:
     inside=0
     def __init__(self,index=0,theid=0):
-        loadBase()
-        self.prepare(index)
+        #loadBase()
+        self.build(index)
         if theid!=0:
             self.newbox(theid)
     def left(self):
         if self.inside:
+            copy=self.inside
             self.inside=0
             self.prepare()
+            appuifw2.app.body.set_current(copy-1)
     def select(self):
+        global base
         if base[self.inside]!=[]:
             if self.inside:
-                #Kurwa, I wasn't that pissed off since they change Family Guy aerial time
                 base[self.inside][self.nana.current()+1].marked=not base[self.inside][self.nana.current()+1].marked
+                temp=base[self.inside][1:]
+                temp.sort(self.cmpfunc)
+                base[self.inside]=[base[self.inside][0]] + temp
             else:
                 self.inside=self.nana.current()+1
-                self.prepare(self.inside)
+                appuifw2.app.body.set_current(0)
+            self.prepare(self.inside)
     def newbox(self,id=0):
         if self.inside:
             a=appuifw2.query(u"Element name:", 'text', u"")
             if a!=u"" and a!=None:
-                b=appuifw2.Item(a)
+                b=appuifw2.Item(a,id=None, priority=4, icon=appuifw2.Icon(u'C:\\idealist\\icons.mbm',4,0))
                 b.marked=False
                 base[self.inside].extend([b])
                 self.prepare(self.inside)
         else:
-            a=appuifw2.query(u"Box name:", 'text', u"")
+            a=appuifw2.query(u"List name:", 'text', u"")
             if a!=u"" and a!=None:
-                b=appuifw2.Item(a)
+                b=appuifw2.Item(a, id=None, priority=4, icon=appuifw2.Icon(u'C:\\idealist\\icons.mbm',4,0))
                 b.marked=False
                 base[0].extend([b])
                 if id!=0:
@@ -298,7 +388,7 @@ class Ideabox:
             if self.inside:
                 a=appuifw2.query(u"Edit","text",base[self.inside][self.nana.current()+1].title)
                 if a!=None and a!="":
-                    z=appuifw2.Item(a)
+                    z=appuifw2.Item(a, id=base[self.inside][self.nana.current()+1].id, priority=base[self.inside][self.nana.current()+1].priority, icon=base[self.inside][self.nana.current()+1].icon)
                     z.marked=base[self.inside][self.nana.current()+1].marked
                     base[self.inside][self.nana.current()+1]=z
                 else:
@@ -306,44 +396,291 @@ class Ideabox:
             else:
                 a=appuifw2.query(u"Edit","text",base[0][self.nana.current()+1].title)
                 if a!=None and a!="":
-                    z=appuifw2.Item(a)
+                    z=appuifw2.Item(a, id=base[self.inside][self.nana.current()+1].id, priority=base[self.inside][self.nana.current()+1].priority, icon=base[self.inside][self.nana.current()+1].icon)
                     base[0][self.nana.current()+1] = z
                 else:
                     return 0
             self.prepare(self.inside)
-
-    def prepare(self,selec=0):
-        try:
-            curr=self.nana.current()
-            del self.nana
-        except:
-            curr=None
+    def prepare(self, selec=0):
+        global base
+        #try:
+        #    self.sprzataj()
+        #except:
+        #    appuifw2.note(u"Can't sort the list")
         
+        appuifw2.app.body.clear()
+        appuifw2.app.body.extend(base[selec][1:])
         if selec==0:
             mark=False
-            appuifw2.app.navi_text=u'Boxes'
-            texxt=u"box"
+            appuifw2.app.navi_text=u'To-do lists'  + ": " + str(len(appuifw2.app.body))
+            texxt=u"list"
         else:
-            appuifw2.app.navi_text=base[0][selec].title
+            appuifw2.app.navi_text=base[0][selec].title  + ": " + str(len(appuifw2.app.body.marked())) + "/" + str(len(appuifw2.app.body))
             mark=True
             texxt=u"element"
-        self.nana=appuifw2.Listbox2(base[selec][1:], markable=mark)
+
+        appuifw2.app.menu_key_text=u"Add " + texxt
+        #appuifw2.note(unicode(appuifw2.app.body.current()))
+        #if appuifw2.app.body.current()>len(appuifw2.app.body)-1:
+        #    try:
+        
+        #    except:
+
+    def cmpfunc(self, x, y):
+        #if ((type(x) is not appuifw2.Item) or (type(y) is not appuifw2.Item)):
+        #    return 0
+        if (int(x.marked)-int(y.marked))!=0:
+            return int(x.marked)-int(y.marked)
+            
+        return x.priority-y.priority
+
+    def sprzataj(self):
+        global base
+        temp=[]
+        if len(base)!=0:
+            for i in range(1,len(base)):
+                temp=base[i][1:]
+                temp.sort(self.cmpfunc)
+                base[i]=[base[i][0]] + temp
+        
+    def pUp(self):
+        global base
+        if base[self.inside]!=[]:
+            if base[self.inside][self.nana.current()+1].priority>1:
+                base[self.inside][self.nana.current()+1]=appuifw2.Item(base[self.inside][self.nana.current()+1].title, marked=base[self.inside][self.nana.current()+1].marked,id=base[self.inside][self.nana.current()+1].id, priority=int(base[self.inside][self.nana.current()+1].priority)-1, icon=appuifw2.Icon(u'C:\\idealist\\icons.mbm',int(base[self.inside][self.nana.current()+1].priority)-1,0))
+                if self.inside:
+                    temp=base[self.inside][1:]
+                    temp.sort(self.cmpfunc)
+                    base[self.inside]=[base[self.inside][0]] + temp
+                self.prepare(self.inside)
+            
+    def pDown(self):
+        global base
+        if base[self.inside]!=[]:
+            if base[self.inside][self.nana.current()+1].priority<4:
+                base[self.inside][self.nana.current()+1]=appuifw2.Item(base[self.inside][self.nana.current()+1].title, marked=base[self.inside][self.nana.current()+1].marked,id=base[self.inside][self.nana.current()+1].id, priority=int(base[self.inside][self.nana.current()+1].priority)+1, icon=appuifw2.Icon(u'C:\\idealist\\icons.mbm',int(base[self.inside][self.nana.current()+1].priority)+1,0))
+                if self.inside:
+                    temp=base[self.inside][1:]
+                    temp.sort(self.cmpfunc)
+                    base[self.inside]=[base[self.inside][0]] + temp
+                self.prepare(self.inside)
+        
+    def build(self,selec=0):
+        global base
+        try:
+            self.sprzataj()
+        except Exception:
+            appuifw2.note(u"Can't sort the list")
+        self.nana=appuifw2.Listbox2(base[selec][1:], markable=True, icons=True)
+        
         self.nana.set_empty_list_text=u"Empty list"
         appuifw2.app.body=self.nana
         appuifw2.app.screen='normal'
-        if curr!=None:
-            self.nana.set_current=curr
+        #select the last selected item
+        
+        if selec==0:
+            appuifw2.app.navi_text=u'To-do lists'  + ": " + str(len(appuifw2.app.body))
+            texxt=u"list"
+        else:
+            appuifw2.app.navi_text=base[0][selec].title  + ": " + str(len(appuifw2.app.body.marked())) + "/" + str(len(appuifw2.app.body))
+            texxt=u"element"
+            
         self.nana.bind(key_codes.EKeyBackspace,self.delbox)
         self.nana.bind(key_codes.EKeySelect,self.select)
         self.nana.bind(key_codes.EKeyLeftArrow,self.left)
         self.nana.bind(key_codes.EKeyRightArrow,self.select)
         self.nana.bind(key_codes.EKeyYes,self.edit)
+        self.nana.bind(key_codes.EKey1,self.pUp)
+        self.nana.bind(key_codes.EKey4,self.pDown)
+        
         appuifw2.app.menu_key_text=u"Add " + texxt
         appuifw2.app.menu_key_handler=self.newbox
         self.inside=selec
         appuifw2.app.menu=[]
-        #appuifw2.app.menu=[(u"Add to box", self.add2box),(u"Remove from box", self.rembox),(u"Box", ((u"Add box", self.newbox),(u"Edit box name", self.edit),(u"Remove box", self.editbox)))]
+        
+        
+        
+class Todoist:
+    def __init__(self, token):
+        if token=="":
+            appuifw2.note(u"Please enter a valid token and try again")
+            return 0
+        self.token=token
+        appuifw2.note(u"Connecting using token: " + unicode(str(self.token)))
+        self.baseurl = 'http://todoist.com/API/'
 
+    def addItems(self, project_id, content,priority=4):
+        
+        try:
+            xtra='addItem?content=%s&project_id=%s&priority=%s&token=%s' % (urllib.quote(content), project_id, priority, self.token)
+        except:
+            appuifw2.note(u"error making new")
+        try:
+            tapi = urllib.urlopen(self.baseurl + xtra)
+            #appuifw2.query(unicode(self.baseurl + xtra),'query')
+            data=tapi.read().replace("\"","\"")
+        except:
+            appuifw2.note(u"error making new2")
+        try:
+            tapi.close()
+            null=0
+            data = eval(data)
+        except:
+            appuifw2.note(u"error 3 " + unicode(str(data)))
+        return data['id']
+        
+        
+    
+    def getProjects(self):
+        #retrun list of projects
+        xtra = 'getProjects?token='
+        proby=0
+
+        while(proby<3):
+            try:
+                tapi = urllib.urlopen(self.baseurl+xtra+self.token)
+                proby=3
+                
+            except:
+                proby+=1
+                appuifw2.note(unicode(proby) + " connection attempt")
+                
+        data=tapi.read().replace("\"","\"")
+        tapi.close()
+        null=0
+        data = eval(data)
+        if type(data) is str:
+            appuifw2.note(unicode(data))
+        return data
+    
+    def updateItem(self, content, id,completed, priority, project_id):
+        
+        xtra = 'updateItem?id=%s&content=%s&priority=%s&token=%s' % (str(id), urllib.quote(content), str(priority), self.token)
+        try:
+            tapi = urllib.urlopen(self.baseurl + xtra)
+        except:
+            appuifw2.note(u"Connection error")
+        try:
+            data=tapi.read().replace("\"","\"")
+            data=eval(data)
+        except:
+            pass
+            #appuifw2.note(u"strange bug")
+        if (id == None or int(id)==0 or (unicode(str(data)[0], 'utf_8') == unicode("A", 'utf_8'))):
+            try:
+                tapi.close()
+            except:
+                pass
+            appuifw2.note(u"Creating new item on list")
+            id=self.addItems(project_id, content, priority)
+            appuifw2.note(u""+ unicode(str(id)))
+            
+        else:
+            tapi.close()
+        if completed:
+            try:
+                xtra = 'completeItems?ids=[%s]&token=%s' % (str(id), self.token)
+                tapi = urllib.urlopen(self.baseurl + xtra)
+                #data=tapi.read().replace("\"","\"")
+                #data=eval(data)
+                tapi.close()
+            except:
+                pass
+        return id
+        #data=tapi.read().replace("\"","'")
+        
+    
+    def getUncompletedItems(self, project_id):
+
+        xtra = 'getUncompletedItems?project_id=%s&token=%s' % (project_id, self.token)
+        tapi = urllib.urlopen(self.baseurl+xtra)
+        data=tapi.read().replace("\"","\"")
+        tapi.close()
+        null=0
+        data=eval(data)
+        return data
+    
+
+    def getCompletedItems(self, project_id):
+
+        xtra = 'getCompletedItems?project_id=%s&token=%s' % (project_id, self.token)
+        tapi = urllib.urlopen(self.baseurl+xtra)
+        data=tapi.read().replace("\"","\"")
+        tapi.close()
+        null=0
+        data=eval(data)
+        return data
+
+    def downloadBase(self, token='9f5a5b9acd4ad4f43d6bebd0a5e0e0a0c0aedfb9'):
+        global base
+        
+        try:
+            appuifw2.note(u"Getting project list")
+            projects=self.getProjects()
+        except:
+            appuifw2.note(u"Error getting project list")
+        errors=0
+        appuifw2.note(u"Retriving todo-lists")
+        try:
+            newprojects=[[[]]]
+            for i in range(0,len(projects)):
+                newprojects[0]+=[[unicode(projects[i]['name'],'utf_8'),0,projects[i]['id'],0]]
+                #apppuifw2.note(unicode(str(i)) + "/" + unicode(str(len(projects))))
+                try:
+                    newprojects+=[[[]]]
+                    todo=self.getUncompletedItems(projects[i]['id'])
+                    for j in range(0,len(todo)):
+                        newprojects[i+1]+=[[unicode(todo[j]['content'],'utf_8'),0,todo[j]['id'],5-int(todo[j]['priority'])]]
+                    
+                    todo=self.getCompletedItems(projects[i]['id'])
+                    for j in range(0,len(todo)):
+                        newprojects[i+1]+=[[unicode(todo[j]['content'],'utf_8'),1,todo[j]['id'],5-int(todo[j]['priority'])]]
+                except:
+                    errors+=1
+                    appuifw2.note(u"Errors: " + str(errors))
+            appuifw2.note(unicode(newprojects))
+            base=[]
+            for i in range(0,len(newprojects)):
+                base+=[[]]
+                base[i]+=[newprojects[i][0]]
+                for j in range(1,len(newprojects[i])):
+                    base[i]+=[[]]
+                    try:
+                        base[i][j]=appuifw2.Item(newprojects[i][j][0], id=newprojects[i][j][2], priority=newprojects[i][j][3])
+                    except:
+                        base[i][j]=appuifw2.Item(newprojects[i][j][0], id=None, priority=newprojects[i][j][3])
+                    base[i][j].marked=newprojects[i][j][1]
+            if errors==0:
+                
+                appuifw2.note(u"Download succesfull!")
+        except:
+            odp=appuifw2.query(u"An error occured, try again?", 'query')
+            if odp:
+                self.downloadBase()
+            else:
+                pass
+                loadBase()
+        
+        saveBase() 
+        appuifw2.note(u"Finish!")        
+    def uploadBase(self):
+        global base
+        
+        appuifw2.note(u"Sending information to todoist")
+        for j in range(1, len(base)):
+            if base[0][j].id==None:
+                continue
+            appuifw2.note(u"List " + base[0][j].title)
+            for i in range(1, len(base[j])):
+                try:
+                    base[j][i].id=self.updateItem(base[j][i].title, base[j][i].id, base[j][i].marked, base[j][i].priority, base[0][j].id)
+                    appuifw2.note(u"" + str(i) + "/" + str(len(base[j])-1))
+                except:
+                    appuifw2.note(u"Error on element " + i.title)
+        saveBase()
+        appuifw2.note(u"Upload complete!")
+        
+        
 def buildRepeat(start, edit=0):
     global days, months
     posibles=['daily','weekly','monthly_by_days','monthly_by_dates','yearly_by_date','yearly_by_day']
@@ -596,12 +933,12 @@ def makeEvent(idea,space, ok=0):
     if not alarm:
         noyes=appuifw2.query( u"Set Alarm ?","query")
         if noyes:
-            c.priority=3
+            c.priority=2
             c.alarm=viewday+int(space[0])*3600+int(space[1])*60
         else:
-            c.priority=2
+            c.priority=0
     else:
-        c.priority=3
+        c.priority=2
         c.alarm=viewday+int(space[0])*3600+int(space[1])*60
     c.commit()
     forwatch()
@@ -619,26 +956,26 @@ def delEvent():
     gradient()
     draw(events)
     
-def editevent():
+def editEvent():
     global selected, events, viewday
     a=[]
     for i in ideacat:
         a.extend([i[0]])
 
-    data=[(u'Idea','text',events[selected][4]),(u'Category','combo', (a,int(events[selected][5]))),(u'Silent','combo', ([u"No",u"Yes"],int(events[selected][6]%2))),(u'Event start','time',float(events[selected][0]*3600+events[selected][1]*60)),(u'Event end','time',float(events[selected][2]*3600+events[selected][3]*60)),(u'Event date','date',viewday)]
+    data=[(u'Idea','text',events[selected][4]),(u'Category','combo', (a,int(events[selected][5]))),(u'Silent','combo', ([u"No",u"Yes"],int(events[selected][6]%2))),(u'Alarm','combo', ([u"No",u"Yes"],int(events[selected][6]/2))),(u'Event start','time',float(events[selected][0]*3600+events[selected][1]*60)),(u'Event end','time',float(events[selected][2]*3600+events[selected][3]*60)),(u'Event date','date',viewday)]
     flags = appuifw2.FFormEditModeOnly
     f=appuifw2.Form(data,flags)
     f.execute()
     events[selected][4]=f[0][2]
     events[selected][5]=f[1][2][1]
-    events[selected][0]=int((f[3][2])/3600)
-    events[selected][1]=int((f[3][2])%3600/60)
-    events[selected][2]=int((f[4][2])/3600)
-    events[selected][3]=int((f[4][2])%3600/60)
-    events[selected][6]=int(f[2][2][1])
-    if f[5][2] != viewday:
+    events[selected][0]=int((f[4][2])/3600)
+    events[selected][1]=int((f[4][2])%3600/60)
+    events[selected][2]=int((f[5][2])/3600)
+    events[selected][3]=int((f[5][2])%3600/60)
+    events[selected][6]=int(f[2][2][1])+2*int(f[3][2][1])
+    if f[6][2] != viewday:
         event=events[selected]
-        viewday=f[5][2]
+        viewday=f[6][2]
         prepare(viewday)
         if events==[[]]:
             events=[]
@@ -667,6 +1004,7 @@ def newEvent():
         draw(events)
         drawRectangle(eventsEmpty)
         
+        
 
 def newReminder():
     global inHand, events, viewday, hline, remindinfo
@@ -692,7 +1030,7 @@ def newReminder():
 
 
 def newMessage():
-    global inHand, events, viewday, hline, smslist, messageinfo, atext
+    global inHand, events, viewday, hline, smsList, messageinfo, atext
     message=appuifw2.query(u"Message text:", 'text', messageinfo)
     
     if message != None and message!= u"":
@@ -709,13 +1047,13 @@ def newMessage():
             d=c.find(type='mobile_number')
             try:
                 d=d[0].value
-                smslist.extend([[viewday+hline*60,d,message,allo[b]]])
-                inHand = 1
-                for i in range(0,len(smslist)):
-                    if smslist[i][0]<time.time():
-                        del smslist[i]
-                smslist.sort()
-                pickle.dump(smslist,open('C:\\idealist\\smses.txt','w'))
+                smsList.extend([[viewday+hline*60,d,message,allo[b]]])
+                inHand = 0
+                for i in range(0,len(smsList)):
+                    if smsList[i][0]<time.time():
+                        del smsList[i]
+                smsList.sort()
+                pickle.dump(smsList,open('C:\\idealist\\smses.txt','w'))
             except:
                 appuifw2.note(u"The contact doesn't contain a mobile phone number!")
         appuifw2.app.screen='full'
@@ -727,7 +1065,13 @@ def newMessage():
         handleRedraw(None)
     messageinfo=u""
 
-
+def newVoiceNote():
+    global recording, snd, voiceNote
+    voiceNote= str(int(time.time()))
+    snd=audio.Sound.open("C:\\idealist\\"+ voiceNote +".wav")
+    appuifw2.note(u"Talk after this message dissapears.")
+    recording=1
+    snd.record()
 
 def newAnniversary(str=0):
     global viewday, events, inHand, annivsinfo
@@ -762,7 +1106,7 @@ def overwrite(michal=-2):
     b=calendar.open()    
     c=b.__getitem__(events[michal][-1])
     c.begin()
-    alarminfo=c.alarm
+    alarminfo=c.priority
     if c.get_repeat()!=None:
         choices = [u"This only", u"Future", u"All"]
         index = appuifw2.popup_menu(choices, u"Save "+events[michal][4])
@@ -778,12 +1122,14 @@ def overwrite(michal=-2):
             d.location=events[michal][5]
             d.priority=events[michal][6]
             d.set_time(viewday+events[michal][0]*3600+events[michal][1]*60,viewday+events[michal][2]*3600+events[michal][3]*60)
-            if alarminfo!=None:
-                d.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
-            else:
-                d.alarm=None
+            try:
+                if int(alarminfo)/2>0:
+                    d.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
+                else:
+                    d.alarm=None
+            except:
+                pass
             d.commit()
-            forwatch()
         if index==1:
             #Make the old event end at the start day of the new one
             c.set_time(c.start_time,c.end_time)
@@ -802,37 +1148,44 @@ def overwrite(michal=-2):
             c.location=events[michal][5]
             c.priority=events[michal][6]
             c.set_time(viewday+events[michal][0]*3600+events[michal][1]*60,viewday+events[michal][2]*3600+events[michal][3]*60)
-            if alarminfo!=None:
-                c.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
-            else:
-                c.alarm=None
+            try:
+                if int(alarminfo)/2>0:
+                    c.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
+                else:
+                    c.alarm=None
+            except:
+                pass
             zzz['start']=viewday
             c.set_repeat(zzz)
             c.commit()
-            forwatch()
         elif index==2:
             #Make the old event end at the start day of the new one
             c.content=events[michal][4]
             c.location=events[michal][5]
             c.priority=events[michal][6]
             c.set_time(viewday+events[michal][0]*3600+events[michal][1]*60,viewday+events[michal][2]*3600+events[michal][3]*60)
-            if alarminfo!=None:
-                c.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
-            else:
-                c.alarm=None
+            try:
+                if int(alarminfo)/2>0:
+                    c.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
+                else:
+                    c.alarm=None
+            except:
+                pass
             c.commit()
-            forwatch()
     else:
         c.content=events[michal][4]
         c.location=events[michal][5]
         c.priority=events[michal][6]
         c.set_time(viewday+events[michal][0]*3600+events[michal][1]*60,viewday+events[michal][2]*3600+events[michal][3]*60)
-        if alarminfo!=None:
-            c.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
-        else:
-            c.alarm=None
+        try:
+            if int(alarminfo)/2>0:
+                c.alarm=viewday+events[michal][0]*3600+events[michal][1]*60
+            else:
+                c.alarm=None
+        except:
+            pass
         c.commit()
-        forwatch()
+    forwatch()
 def delEvent(sel):
     global events
     #DELETE EVENT INTELI GENTLY
@@ -845,12 +1198,14 @@ def delEvent(sel):
         if index==2:
             b.__delitem__(events[sel][-1])
             del events[sel]
+            forwatch()
         elif index==1:
             c.begin()
             zz['end']=viewday-2*(24*3600)
             c.set_repeat(zz)
             c.commit()
             del events[sel]
+            forwatch()
         elif index==0:
             b=calendar.open()
             c.begin()
@@ -859,6 +1214,7 @@ def delEvent(sel):
             c.set_repeat(zz)
             c.commit()
             del events[sel]
+            forwatch()
             return 1
         else:
             return 0
@@ -867,10 +1223,11 @@ def delEvent(sel):
         if yesno:
             b.__delitem__(events[sel][-1])
             del events[sel]
+            forwatch()
             return 1
             #END DELETE EVENT INTELIGENTLY
         return 0
-
+    
 
 def move(time):
     global events, selected, hstop, hstart, anychange, savelist, inHand, eventCopy, anychange, viewday, mode, start, eventsEmpty, hline
@@ -1130,6 +1487,16 @@ def move(time):
         gradient()
         draw(events)
         drawHLine("message")
+    elif inHand==3:
+        if hline+time<hstart*60:
+            hline=hstart*60
+        elif hline+time>hstop*60:
+            hline=hstop*60
+        else:
+            hline+=time
+        gradient()
+        draw(events)
+        drawHLine("voice note")
         
     elif inHand==-2:
         if time>0:
@@ -1147,15 +1514,17 @@ def idea2event(i,idea):
     c.content=idea[4]
     c.location=idea[5]
     c.set_time(viewday+i[0]*3600+i[1]*60,viewday+i[2]*3600+i[3]*60)
+    
     if not alarm:
         noyes=appuifw2.query( u"Set Alarm ?","query")
         if noyes:
-            c.priority=3
-            c.alarm=vviewday+int(i[0])*3600+int(i[1])*60
+            c.priority=2+(int(idea[6])%2)
+            c.alarm=viewday+int(i[0])*3600+int(i[1])*60
         else:
-            c.priority=2
+            c.priority=0+(int(idea[6])%2)
     else:
-        c.priority=3
+        
+        c.priority=0+(int(idea[6])%2)
         c.alarm=viewday+int(i[0])*3600+int(i[1])*60
     c.commit()
     forwatch()
@@ -1192,24 +1561,30 @@ def handleRedraw(rect):
     if img: canvas.blit(img)
 
 def quickEdit():
-    global selected, inHand, viewday, events, mode, start, colors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, eventsEmpty, remind, smslist, messageinfo, remindinfo, annivs, annivsinfo, base, ideabox, missedcalls, unreadsms,weekday, menu, alarm
+    global selected, inHand, viewday, events, mode, start, colors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, eventsEmpty, remind, smsList, messageinfo, remindinfo, annivs, annivsinfo, base, todo, missedcalls, unreadsms,weekday, menu, alarm
     b=calendar.open()
-    alarminfo=None
+    alarminfo=0
     try:
         d=b.__getitem__(events[selected][-1])
         d.begin()
-        alarminfo=d.alarm
+        alarminfo=int(d.priority)
+        #d.close()
     except:
         appuifw2.note(u"Error building menu")
-    if alarminfo==None:
-        label=u"Turn Alarm ON"
-    else:
-        label=u"Turn Alarm OFF"
+    try:        
+        if int(alarminfo)/2<1:
+            label=u"Turn Alarm ON"
+        else:
+            label=u"Turn Alarm OFF"
+    except:
+        pass
     
     b=appuifw2.popup_menu([u"Name",u"Category",u"Repeat rules",u"Color",label,u"More"], u"Edit " + events[selected][4])
     if b==0:
         c=appuifw2.query(u"Name", 'text',unicode(events[selected][4]))
+        selection=events[selected]
         if c != events[selected][4] and c!=None:
+            selection[4]=c
             events[selected][4]=c
             b=calendar.open()
             d=b.__getitem__(events[selected][-1])
@@ -1226,15 +1601,17 @@ def quickEdit():
                     d.commit()
                     #Make a new shit
                     d=b.add_appointment()
-                    d.content=events[selected][4]
-                    d.location=events[selected][5]
-                    d.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
+                    d.content=selection[4]
+                    d.location=selection[5]
+                    d.set_time(viewday+selection[0]*3600+selection[1]*60,viewday+selection[2]*3600+selection[3]*60)
                     d.priority=events[selected][6]
-                    if alarminfo!=None:
-                        d.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
-                    else:
-                        d.alarm=None
-                    d.commit()
+                    try:
+                        if int(alarminfo)/2>0:
+                            d.alarm=viewday+selection[0]*3600+selection[1]*60
+                        else:
+                            d.alarm=None
+                    except:
+                        pass
                 elif index==1:
                     #Make the old event end at the start day of the new one
                     zz=d.get_repeat()
@@ -1245,25 +1622,29 @@ def quickEdit():
                     d.commit()
                     #Make a new shit
                     d=b.add_appointment()
-                    d.content=events[selected][4]
-                    d.location=events[selected][5]
-                    d.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
-                    d.priority=events[selected][6]
-                    if alarminfo!=None:
-                        d.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
-                    else:
-                        d.alarm=None
+                    d.content=selection[4]
+                    d.location=selection[5]
+                    d.set_time(viewday+selection[0]*3600+selection[1]*60,viewday+selection[2]*3600+events[selected][3]*60)
+                    d.priority=selection[6]
+                    try:
+                        if int(alarminfo)/2>0:
+                            d.alarm=viewday+selection[0]*3600+selection[1]*60
+                        else:
+                            d.alarm=None
+                    except:
+                        pass
                     zzz['start']=viewday
                     d.set_repeat(zzz)
-                    d.commit()
                 elif index==2:
                     #Make the old event end at the start day of the new one
-                    d.content=events[selected][4]
-                    d.commit()
-            d.content=events[selected][4]
+                    d.content=selection[4]
+            else:
+                d.content=selection[4]    
+            
             d.commit()
             draw(events)
             drawRectangle(events)
+            
     elif b==1:
         a=[]
         for i in ideacat:
@@ -1291,10 +1672,13 @@ def quickEdit():
                     d.location=events[selected][5]
                     d.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
                     d.priority=events[selected][6]
-                    if alarminfo!=None:
-                        d.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
-                    else:
-                        d.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            d.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
+                        else:
+                            d.alarm=None
+                    except:
+                        pass
                     d.commit()
                 elif index==1:
                     #Make the old event end at the start day of the new one
@@ -1311,10 +1695,13 @@ def quickEdit():
                     d.location=events[selected][5]
                     d.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
                     d.priority=events[selected][6]
-                    if alarminfo!=None:
-                        d.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
-                    else:
-                        d.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            d.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
+                        else:
+                            d.alarm=None
+                    except:
+                        pass
                     zzz['start']=viewday
                     d.set_repeat(zzz)
                     d.commit()
@@ -1340,10 +1727,13 @@ def quickEdit():
                     c.begin()
                     c.set_time(c.start_time,c.end_time)
                     c.priority=events[selected][6]
-                    if alarminfo!=None:
-                        c.alarm=c.start_time
-                    else:
-                        c.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            c.alarm=c.start_time
+                        else:
+                            c.alarm=None
+                    except:
+                        pass
                     zz=c.get_repeat()
                     #Huj ze dwa dni do tylu zamiast jednego ale to DZIALA!
                     zz['end']=viewday-2*(24*3600)
@@ -1356,10 +1746,13 @@ def quickEdit():
                     c.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
                     
                     c.priority=events[selected][6]
-                    if alarminfo!=None:
-                        c.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
-                    else:
-                        c.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            c.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
+                        else:
+                            c.alarm=None
+                    except:
+                        pass
                     c.set_repeat(builded)
                     c.commit()
                     return 0
@@ -1368,10 +1761,13 @@ def quickEdit():
                     c.begin()
                     c.set_time(c.start_time,c.end_time)
                     c.priority=events[selected][6]
-                    if alarminfo!=None:
-                        c.alarm=c.start_time
-                    else:
-                        c.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            c.alarm=c.start_time
+                        else:
+                            c.alarm=None
+                    except:
+                        pass
                     c.set_repeat(builded)
                     c.commit()
                     return 0
@@ -1380,10 +1776,13 @@ def quickEdit():
                     c.begin()
                     c.set_time(c.start_time,c.end_time)
                     c.priority=events[selected][6]
-                    if alarminfo!=None:
-                        c.alarm=c.start_time
-                    else:
-                        c.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            c.alarm=c.start_time
+                        else:
+                            c.alarm=None
+                    except:
+                        pass
                     zz=c.get_repeat()
                     #Huj ze dwa dni do tylu zamiast jednego ale to DZIALA!
                     zz['exceptions']=list(zz['exceptions']) + [viewday+3600]
@@ -1395,10 +1794,13 @@ def quickEdit():
                     c.location=events[selected][5]
                     c.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
                     c.priority=events[selected][6]
-                    if alarminfo!=None:
-                        c.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
-                    else:
-                        c.alarm=None
+                    try:
+                        if int(alarminfo)/2>0:
+                            c.alarm=viewday+events[selected][0]*3600+events[selected][1]*60
+                        else:
+                            c.alarm=None
+                    except:
+                        pass
                     c.commit()
                     return 0
             c.begin()
@@ -1415,10 +1817,12 @@ def quickEdit():
             except:
                 appuifw2.note(u"Can't change color. Event doesn't belong to any category!")
     elif b==4:
-        if alarminfo == None:
-            alarminfo=viewday+events[selected][0]*3600+events[selected][1]*60
-        else:
-            alarminfo=None
+        alarmek=None
+        try:
+            if int(alarminfo)/2 <1:
+                alarmek=viewday+events[selected][0]*3600+events[selected][1]*60
+        except:
+            alarmek=None
             
         b=calendar.open()
         d=b.__getitem__(events[selected][-1])
@@ -1437,9 +1841,13 @@ def quickEdit():
                 d.content=events[selected][4]
                 d.location=events[selected][5]
                 d.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
-                d.priority=events[selected][6]
-                d.alarm=alarminfo
+                d.priority=(events[selected][6]+2)%4
+                d.alarm=alarmek
                 d.commit()
+                prepare(viewday)
+                draw(events)
+                drawRectangle(events)
+                forwatch()
                 return 0
             elif index==1:
                 #Make the old event end at the start day of the new one
@@ -1455,26 +1863,37 @@ def quickEdit():
                 d.content=events[selected][4]
                 d.location=events[selected][5]
                 d.set_time(viewday+events[selected][0]*3600+events[selected][1]*60,viewday+events[selected][2]*3600+events[selected][3]*60)
-                d.priority=events[selected][6]
+                d.priority=(events[selected][6]+2)%4
                 d.alarm=alarminfo
                 zzz['start']=viewday
                 d.set_repeat(zzz)
                 d.commit()
+                prepare(viewday)
+                draw(events)
+                drawRectangle(events)
+                forwatch()
                 return 0
             elif index==2:
                 #Make the old event end at the start day of the new one
-                d.priority=events[selected][6]
+                d.priority=(events[selected][6]+2)%4
                 d.alarm=alarminfo
                 d.commit()
+                prepare(viewday)
                 draw(events)
                 drawRectangle(events)
+                forwatch()
                 return 0
-        d.alarm=alarminfo
+            return 0
+        
+        d.alarm=alarmek
+        d.priority=(events[selected][6]+2)%4
         d.commit()
+        prepare(viewday)
         draw(events)
         drawRectangle(events)
     elif b==5:
-        editevent()
+        editEvent()
+    forwatch()
 
 def menuUp():
     global menu
@@ -1520,13 +1939,13 @@ def menuUp():
     return 0
 
 def menuDown():
-    global alarm, events, menu
+    global alarm, events, menu, token
     if alarm:
         label=u"Turn Auto add alarm OFF"
     else:
         label=u"Turn Auto add alarm ON"
     menu=0
-    menua=[u"Wake-sleep hours", u"Categories colors", u"Font", label, u"App info",u"Standby screen", u"Update",u"Exit"]
+    menua=[u"Wake-sleep hours", u"Categories colors", u"Font", label, u"App info",u"Standby screen",u"Todoist Web token", u"Update",u"Exit"]
     gradient()
     draw(events)
     drawRectangle(events)
@@ -1537,7 +1956,7 @@ def menuDown():
     if cc==0:
         setHours()
     elif cc==1:
-        catconfig()
+        categoryConfig()
     elif cc==2:
         changeFont()
     elif cc==3:
@@ -1555,45 +1974,57 @@ def menuDown():
         screenObj=DrawStandby()
         onstandby=True
         drawOnStandby()
-        
     elif cc==6:
-        update()
+        token2=appuifw2.query(u"Set token",'text', unicode(str(token)))
+        if token2!=None:
+            token=token2
+            saveConfig()
     elif cc==7:
+        update()
+    elif cc==8:
         quit()
     return 0
 def menuLeft():
-    global menu
-    menu=0
-    appuifw2.app.screen='normal'
-    nana=appuifw2.Listbox(ideasnames(),putIt)
-    nana.bind(key_codes.EKeyBackspace,delidea)
-    nana.bind(key_codes.EKeyYes,editIdea)
-    nana.bind(key_codes.EKeyLeftArrow,cleft)
-    nana.bind(key_codes.EKeyRightArrow,cright)
-    appuifw2.app.body=nana
-    appuifw2.app.menu_key_text=u"Add Idea"
-    appuifw2.app.left_navi_arrow=True
-    appuifw2.app.right_navi_arrow=True
-    if cati==len(ideacat):
-        appuifw2.app.navi_text=u'All categories'
-    else:
-        appuifw2.app.navi_text=ideacat[cati][0]
-    appuifw2.app.menu=[]
-    appuifw2.app.menu_key_handler=newidea
-    return 0
+    global menu, token
+    menu = 0
+    gradient()
+    draw(events)
+    drawRectangle(events)
+    drawSms()
+    drawSignal()
+    handleRedraw(None)
+    a=appuifw2.popup_menu([u"Upload",u"Download"], u"Sync direction")
+    if a==0:
+        apid = socket.select_access_point()
+        apo = socket.access_point(apid)
+        socket.set_default_access_point(apo)
+        apo.start()
+        x=Todoist(token)
+        appuifw2.note(u"Starting upload")
+        x.uploadBase()
+        apo.stop()
+    elif a==1:
+        apid = socket.select_access_point()
+        apo = socket.access_point(apid)
+        socket.set_default_access_point(apo)
+        apo.start()
+        x=Todoist(token)
+        appuifw2.note(u"Starting download")
+        x.downloadBase()
+        apo.stop()
 def menuRight():
     global menu
     menu=0
     try:
-        del ideabox
+        del todo
     except:
         pass
-    ideabox = Ideabox()
+    todo = Todo()
     return 0
 def menuMiddle():
-    global menu, remind, hline, remindinfo, inHand, mode
+    global menu, remind, hline, remindinfo, inHand, mode, soundList, voiceNote, recording, snd, viewday
     menu=0
-    choices = [u"This Event",u"Reminder",u"Anniversary", u"Message"]
+    choices = [u"This Event",u"Reminder",u"Anniversary", u"Message", u"Voice note"]
     gradient()
     draw(events)
     drawRectangle(events)
@@ -1624,19 +2055,19 @@ def menuMiddle():
                 handleRedraw(None)
     elif index == 3:
         sms=[]
-        if smslist!=[]:
+        if smsList!=[]:
             db=contacts.open()
-            for i in smslist:
+            for i in smsList:
                 if (0<=(int(i[0])-viewday)) and (3600*24 >(int(i[0])-viewday)):
                     sms.extend([unicode(int(i[0]-viewday)/3600)+":"+str(int((i[0]-viewday)%3600/60))+" "+db.__getitem__(int(i[3])).title+"-" +i[2]])
             c1 = appuifw2.popup_menu(sms,u"Sms list:")
             if c1!=None:
-                hline=(smslist[c1][0]-viewday)/60
+                hline=(smsList[c1][0]-viewday)/60
                 selected=0
-                messageinfo=unicode(smslist[c1][2])
-                del smslist[c1]
-                smslist.sort()
-                pickle.dump(smslist,open('C:\\idealist\\smses.txt','w'))
+                messageinfo=unicode(smsList[c1][2])
+                del smsList[c1]
+                smsList.sort()
+                pickle.dump(smsList,open('C:\\idealist\\smses.txt','w'))
                 selected=0
                 inHand=-1
                 gradient()
@@ -1644,6 +2075,8 @@ def menuMiddle():
                 drawSms()
                 drawHLine("message")
                 handleRedraw(None)
+        else:
+            appuifw2.note(u"No sms found!")
     elif index == 2: 
         if annivs!=[]:
             names=[]
@@ -1662,6 +2095,32 @@ def menuMiddle():
                 draw(events)
                 drawSms()
                 handleRedraw(None)
+        else:
+            appuifw2.note(u"No anniversaries for today!")
+    elif index == 4: 
+        if soundList!=[]:
+            s=[]
+            for i in soundList:
+                if (0<=(int(i[0])-viewday)) and (3600*24 >(int(i[0])-viewday)):
+                    s.extend([unicode(str(time.gmtime(i[0])))])
+            c1 = appuifw2.popup_menu(s,u"Voice tag list:")
+            if c1!=None:
+                hline=(soundList[c1][0]-viewday)/60
+                selected=0
+                inHand=3
+                gradient()
+                draw(events)
+                drawSms()
+                drawHLine("voice note")
+                voiceNote=soundList[c1][1]
+                del soundList[c1]
+                soundList.sort()
+                pickle.dump(smsList,open('C:\\idealist\\sounds.txt','w'))
+                recording=1
+                snd=audio.Sound.open("C:\\idealist\\"+ voiceNote +".wav")
+                handleRedraw(None)
+        else:
+            appuifw2.note(u"No voice notes found!")
     return 0
 
 
@@ -1698,9 +2157,10 @@ def checkAndAdd():
     drawSignal()
     draw(events)
     drawAdjust()
+    forwatch()
 #This thing handles buttons which are being clicked
 def handleEvent(event):
-    global selected, ideas,inHand, viewday, events, mode, start, clors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, eventsEmpty, remind, smslist, messageinfo, remindinfo, annivs, annivsinfo, base, ideabox, missedcalls, unreadsms,weekday, menu, alarm, screenObj, onstandby
+    global selected, ideas,inHand, viewday, events, mode, start, clors, anychange, ideacat, dhstop, dhstart, hstart, hstop, eventCopy, otherday, savelist, hline, cati, m, eventsEmpty, remind, smsList, messageinfo, remindinfo, annivs, annivsinfo, base, todo, missedcalls, unreadsms,weekday, menu, alarm, screenObj, onstandby, snd, voiceNote, soundList, recording
     ev = event['keycode']
     pi = event['scancode']
 #This part in part used to be a redraw triggerer in past - not needed anymore
@@ -1748,7 +2208,8 @@ def handleEvent(event):
                     drawRectangle(eventsEmpty)
                 elif inHand==0:
                     drawRectangle(events)
-        return 0
+        else:
+            return 0
                 
     elif ev == key_codes.EKey3 and inHand==0 and mode==0:
         newEvent()
@@ -1763,6 +2224,7 @@ def handleEvent(event):
             hline=(time.time()-viewday)/60 + 30
         else:
             hline=(hstart*60+(hstop-hstart)*30)
+        drawSignal()
         drawHLine("reminder")
         return 0
         
@@ -1771,6 +2233,32 @@ def handleEvent(event):
         gradient()
         draw(events)
         return 0
+    elif ev==key_codes.EKeyStar and inHand==0 and mode==0:
+        inHand=3
+        gradient()
+        draw(events)
+        current=time.time()-viewday
+        if current>0 and current<3600*24:
+            hline=(time.time()-viewday)/60 + 30
+        else:
+            hline=(hstart*60+(hstop-hstart)*30)
+        drawHLine("voice note")
+        return 0
+    
+    elif ev==key_codes.EKey7 and inHand==0 and mode==0:
+        try:
+            if events[selected]==[]:
+                appuifw2.note(u"Nothing to copy!")
+                return 0
+        except:
+            pass
+        gradient()
+        mode=1
+        eventCopy=list(events[selected])
+        eventCopy[-1]=None
+        otherday=viewday
+        draw(events)
+        drawHalf(u"Copy")
     
     elif ev==key_codes.EKeyHash and inHand==0 and mode==0:
         inHand=-1
@@ -1816,8 +2304,45 @@ def handleEvent(event):
     elif ev == key_codes.EKeySelect:
         if menu:
             menuMiddle()
+        elif recording and inHand==3:
+            try:
+                snd.stop()
+            except:
+                pass
+            snd.play()
+            q=appuifw2.query(u"Is it ok?","query")
+            if not q:
+                snd.stop()
+                snd.close()
+                newVoiceNote()
+            else:
+                snd.stop()
+                snd.close()
+                appuifw2.note(u"Added succesfully")
+                inHand = 0
+                try:
+                    soundList.extend([[viewday+hline*60,voiceNote]])
+                except:
+                    appuifw2.note(u"Can't add the voice note.")
+                try:
+                    for i in range(0,len(soundList)):
+                        if soundList[i][0]<time.time():
+                            del soundList[i]
+                except:
+                    pass
+                soundList.sort()
+                pickle.dump(soundList,open('C:\\idealist\\sounds.txt','w'))
+                gradient()
+                draw(events)
+                drawRectangle(events)
+                drawSms()
+                drawSignal()
+                handleRedraw(None)
+            recording=0
         elif inHand==-1:
             newMessage()
+        elif inHand==3:
+            newVoiceNote()
         elif inHand==-2:
             if eventsEmpty==[]:
                 appuifw2.note(u"There's nothing to choose from at this day")
@@ -1831,15 +2356,15 @@ def handleEvent(event):
             #Pretty much awesome function!
             if mode==0 and events[selected]!=[]:
                 try:
-                    del ideabox
+                    del todo
                 except:
                     pass
                 theid=events[selected][-1]
                 for i in range(1,len(base)):
                     if theid in base[i][0]:
-                        ideabox=Ideabox(index=i)
+                        todo=Todo(index=i)
                         return 0
-                b=appuifw2.popup_menu([u"Connect with IdeaBox",u"New Ideabox"],u"Choose")
+                b=appuifw2.popup_menu([u"Connect with Todo",u"New Todo"],u"Choose")
                 if len(base[0][1:])<1:
                     b=1
                 if b==0:
@@ -1849,50 +2374,47 @@ def handleEvent(event):
                     c=appuifw2.popup_menu(args,u"")
                     if c!=None:
                         base[c+1][0].extend([theid])
-                        savebase()
-                    ideabox=Ideabox(index=(c+1))
+                        saveBase()
+                    todo=Todo(index=(c+1))
                     
                 elif b==1:
-                    ideabox=Ideabox(theid=theid)
-                    savebase()
+                    todo=Todo(theid=theid)
+                    saveBase()
                 loadBase()
             elif mode==1:
                 if anychange:
                     colisions = checkColisions()
                     if len(colisions)==1 and (eventCopy[2]*60+eventCopy[3]-eventCopy[0]*60-eventCopy[1]<=colisions[0][2]*60+colisions[0][3]-colisions[0][0]*60-colisions[0][1]):
-                        events.extend([eventCopy])
-                        overwrite(-1)
+                        if eventCopy[-1]!=None:
+                            events.extend([eventCopy])
+                            overwrite(-1)
+                        else:
+                            idea2event(colisions[0],eventCopy)
+                
                     elif len(colisions)==0:
-                        #IN FUTURE MAKE IT POSIBLE TO ADD IT HERE AFTER A WARNING BY SPLITING UP OTHERS AND ADDING THEM TO IDEABOX
+                        #IN FUTURE MAKE IT POSIBLE TO ADD IT HERE AFTER A WARNING BY SPLITING UP OTHERS AND ADDING THEM TO Todo
                         appuifw2.note(u"You can't add it here!")
+                        return 0
                     else:
-                        choices = [u"Use biggest",u"Use all ava. space"]
-                        index = appuifw2.popup_menu(choices, u"What to do?:")
-                        if index == 0:
-                            much=0
-                            record=0
-                            for i in colisions:
-                                if (i[2]*60+i[3]-i[0]*60-i[1])>much:
-                                    record=i
-                                    much=i[2]*60+i[3]-i[0]*60-i[1]
-                            idea2event(record,eventCopy)
-                            a= appuifw2.query(u"Add the rest to the IdeaList?", "query")
-                            if a:
-                                event2idea(eventCopy,much)
-                        elif index == 1:
+                        if eventCopy[-1]!=None:
                             a=calendar.open()
                             a.__delitem__(eventCopy[-1])
-                            much=0
-                            for i in colisions:
-                               idea2event(i,eventCopy)
-                               much+=i[2]*60+i[3]-i[0]*60-i[1]
-                            if much<(eventCopy[2]*60+eventCopy[3]-eventCopy[0]*60-eventCopy[1]):
-                                b= appuifw2.query(u"Add the rest to the IdeaList?", "query")
-                                if b:
-                                    event2idea(eventCopy,much)
-                    anychange=0
+                        
+                        much=0
+                        best=0
+                        for i in colisions:
+                            if (i[2]*60+i[3]-i[0]*60-i[1])>much:
+                                best=i
+                                much=i[2]*60+i[3]-i[0]*60-i[1]
+                        idea2event(best,eventCopy)
+                            
                     if otherday == viewday:
-                        del events[selected]
+                        try:
+                            if eventCopy[-1]!=None:
+                                del events[selected]
+                        except:
+                            pass
+                    anychange=0
                     prepare(viewday)
                     mode=0
                     gradient()
@@ -2054,6 +2576,16 @@ def handleEvent(event):
             drawHLine("message")
             drawSms()
             drawSignal()
+        elif inHand==3:
+            viewday-=3600*24
+            weekday-=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            draw(events)
+            drawHLine("voice note")
+            drawSms()
+            drawSignal()
         
         elif inHand==-2:
             viewday-=3600*24
@@ -2149,6 +2681,17 @@ def handleEvent(event):
             drawHLine("message")
             drawSms()
             drawSignal()
+            
+        elif inHand==-1:
+            viewday+=3600*24
+            weekday+=1
+            weekday=weekday%7
+            prepare(viewday)
+            gradient()
+            draw(events)
+            drawHLine("voice note")
+            drawSms()
+            drawSignal()
         
         elif inHand==-2:
             viewday+=3600*24
@@ -2175,7 +2718,7 @@ def handleEvent(event):
         quickEdit()
 
     #Deletes an event from the calendar
-    elif ev == key_codes.EKeyBackspace and selected != -1 and inHand==0 and mode==0:
+    elif ev == key_codes.EKeyBackspace and inHand==0 and mode==0:
         delEvent(selected)
         if events==[]:
             events=[[]]
@@ -2183,8 +2726,13 @@ def handleEvent(event):
         gradient()
         draw(events)
         drawRectangle(events)
+    elif ev==key_codes.EKey4 and inHand==0 and mode==0:
+        try:
+            del todo
+        except:
+            pass
+        todo = Todo()
     handleRedraw(None)
-
 
 #Function preparing events db [From internal calendar -> inside the app]
 def prepare(datetime):
@@ -2196,6 +2744,10 @@ def prepare(datetime):
     c=b.daily_instances(datetime, appointments=1, events=0, anniversaries=0,todos=0)
     d=[]
     events=[]
+    
+    offset=(time.localtime()[3] - time.gmtime()[3])%24
+
+    #appuifw2.note(unicode(str(offset)))
     for i in c:
         if i.values()[1]<=datetime+24*3600:
             d.append(i.values()[0])
@@ -2203,7 +2755,7 @@ def prepare(datetime):
         z=b.__getitem__(k)
         start=time.gmtime(z.start_time)
         end=time.gmtime(z.end_time)
-        events.extend([[start[3]-start[-1],start[4],end[3]-end[-1],end[4],z.content,z.location,z.priority,z.id]])
+        events.extend([[start[3]+offset,start[4],end[3]+offset,end[4],z.content,z.location,z.priority,z.id]])
     if events==[]:
         events=[[]]
     
@@ -2225,7 +2777,7 @@ def prepare(datetime):
     for k in d:
         z=b.__getitem__(k)
         start=time.gmtime(z.start_time)
-        remind.extend([[start[3]-start[-1],start[4],z.content,z.id]])
+        remind.extend([[start[3]+offset,start[4],z.content,z.id]])
     return events
     
 
@@ -2234,44 +2786,50 @@ def prepare(datetime):
 
 wlist = []
 def forwatch():
-    global wlist, currentday
+    global wlist, currentday, wlist2
     try:
         b=calendar.open()
     except():
         exit()
-    c=b.daily_instances(currentday, appointments=1, events=0, anniversaries=0,todos=0)
-    d=[]
+        
     wlist=[]
-    for i in c:
-        d.append(i.values()[0])
-    for k in d:
-        z=b.__getitem__(k)
-        if z.end_time>time.time():
-            wlist.extend([[z.start_time,z.end_time,z.content,z.location,z.priority,z.id]])
+    wlist2=[]
+    c=b.daily_instances(currentday, appointments=1, events=0, anniversaries=0,todos=0)
+    c2=b.daily_instances(currentday+24*3600, appointments=1, events=0, anniversaries=0,todos=0)
+    
+    for k in c:
+        z=b.__getitem__(k['id'])
+        if k['datetime']+z.end_time-z.start_time>time.time():
+            wlist.extend([[k['datetime'],k['datetime']+z.end_time-z.start_time,z.content,z.location,z.priority,z.id]])
+    for k in c2:
+        z=b.__getitem__(k['id'])
+        wlist2.extend([[k['datetime'],k['datetime']+z.end_time-z.start_time,z.content,z.location,z.priority,z.id]])
+        
 forwatch()
 canvas=0
 img=0
 w=0
 h=0
 
+screenObj=DrawStandby()
 
 def drawOnStandby():
     global screenObj, onstandby
     #t = e32.Ao_timer()
     while(onstandby):
-        e32.ao_sleep(0.1)
+        e32.ao_sleep(0.05)
         e32.ao_yield()
         current=appswitch.application_list(1)[0]
         if (current=="Standby mode"):
-            screenObj.show()
+            if not screenObj.ifshown:
+                screenObj.show()
         else:
-            screenObj.hide()
-            
+            if screenObj.ifshown:
+                screenObj.hide()
+
 def watchout():
     #Timer function
-    global events, wlist, img, currentday, smslist,w, h,missedcalls, inboxx,currentfont, unreadsms, phone, message, xprof, menu, mode, eventsEmpty
-    #gradient()
-    #while(0):
+    global events, wlist, img, currentday, smsList,w, h,missedcalls, inboxx,currentfont, unreadsms, phone, message, xprof, menu, mode, eventsEmpty, soundList, screenObj
     e32.ao_yield()
     if currentday+24*3600<=time.time():
         currentday+=24*3600*math.floor((time.time()-currentday)/(24*3600))
@@ -2281,32 +2839,61 @@ def watchout():
         currentday+=24*3600*math.floor((time.time()-currentday)/(24*3600))
         forwatch()
     
-    
-    if smslist!=[]:
-        if int(smslist[0][0]/60)==int(time.time()/60):
-            messaging.sms_send(smslist[0][1],smslist[0][2])
-            del smslist[0]
-            smslist.sort()
-            pickle.dump(smslist,open('C:\\idealist\\smses.txt','w'))
-        if smslist[0][0]<time.time():
-            del smslist[0]
-            smslist.sort()
-            pickle.dump(smslist,open('C:\\idealist\\smses.txt','w'))
+    timex=int(time.time()/60)
+    if smsList!=[]:
+        try:
+            if int(smsList[0][0]/60)==timex:
+                messaging.sms_send(smsList[0][1],smsList[0][2])
+                del smsList[0]
+                smsList.sort()
+                pickle.dump(smsList,open('C:\\idealist\\smses.txt','w'))
+            if int(smsList[0][0]/60)<timex:
+                del smsList[0]
+                smsList.sort()
+                pickle.dump(smsList,open('C:\\idealist\\smses.txt','w'))
+        except:
+            pass
+    if soundList!=[]:
+        try:
+            if int(soundList[0][0]/60)==timex:
+                try:
+                    snd=audio.Sound.open("C:\\idealist\\"+ soundList[0][1] +".wav")
+                    snd.play()
+                    appuifw2.note(u"Voice note!")
+                    while (snd.state()==2):
+                        e32.ao_sleep(1)
+                    
+                except:
+                    appuifw2.note(u"A voice note couldn't been played!")
+                del soundList[0]
+            
+            if int(soundList[0][0]/60)<timex:
+                del soundList[0]
+            
+            soundList.sort()
+            snd.close()
+            pickle.dump(soundList,open('C:\\idealist\\sounds.txt','w'))
+        except:
+            pass
     try:
         #globalui.global_note(unicode(str(wlist[0])))
-        if wlist!=[] and int(wlist[0][1]/60)==int(time.time()/60) and (int(wlist[0][4])%2==1):
-            xprofile.set_ap(0)
-            del wlist[0]
-        if wlist!=[] and int(wlist[0][0]/60)==int(time.time()/60) and (int(wlist[0][4])%2==1):
-            xprofile.set_ap(1)
+        if wlist!=[]:
+            if int(wlist[0][1]/60)==timex and (int(wlist[0][4])%2==1):
+                xprofile.set_ap(0)
+                del wlist[0]
+            if int(wlist[0][0]/60)==timex and (int(wlist[0][4])%2==1):
+                xprofile.set_ap(1)
         
     except:
         pass
     
     #This lines display a new message when it comes
     unreadsms=0
-    if inboxx.unread(inboxx.sms_messages()[0])<>0:
-        unreadsms=1
+    try:
+        if inboxx.unread(inboxx.sms_messages()[0])<>0:
+            unreadsms=1
+    except:
+        pass
     #Displays missed calls
     l=logs.calls(mode='missed')  #The dictionary for the latest missed call
     missedcalls=0
@@ -2319,7 +2906,9 @@ def watchout():
     xprof=xprofile.get_ap()[0]
     gradient()
     draw(events)
+    drawSms()
     drawSignal()
+
     if menu:
         mainMenu()
     elif mode==1:
@@ -2336,11 +2925,15 @@ def watchout():
         drawRectangle(eventsEmpty)
     elif inHand==-1:
         drawHLine("message")
+    elif inHand==3:
+        drawHLine("voice note")
     else:
         drawRectangle(events)
     handleRedraw(None)
     
-    timer.after(10, watchout)
+    #screenObj.refresh()
+    
+    timer.after(30, watchout)
     
 def gradient():
     global img, h, w, currentday, newh
@@ -2348,11 +2941,11 @@ def gradient():
     anglehour=(2*math.pi*((time.time()-currentday)/3600)/24)
     coshour=math.cos(anglehour)
     for i in range(0,100):
-        img.rectangle((12,int(i*z+newh),w,int((i+1)*z+newh)), fill=(20,int(-25*coshour+(160-i)),int(-25*coshour+(175-i))))
+        img.rectangle((12,int(i*z+newh),w,int((i+1)*z+newh)), fill=(40,int(-60*coshour+(180-i)),int(-60*coshour+(190-i))))
 
 def quit():
     
-    global inHand, mode, viewday,anychange, running, events, img, selected, menu, inboxx
+    global inHand, mode, viewday,anychange, running, events, img, selected, menu, inboxx, snd,onstandby
 
     if menu:
         menu=0
@@ -2364,9 +2957,10 @@ def quit():
         handleRedraw(None)
         return 0
     elif appuifw2.app.screen != 'full':
+        saveBase()
         predraw()
         buildCanvas()
-    elif inHand == 2 or inHand==-1 or inHand==-2 or inHand==1:
+    elif inHand == 2 or inHand==-1 or inHand==-2 or inHand==1 or inHand==3:
         inHand =0
         appuifw2.note(u"Deleted.")
         prepare(viewday)
@@ -2390,9 +2984,10 @@ def quit():
         return 0
     else:
         try:
-            saveconfig()
+            saveConfig()
         except:
             appuifw2.note(u"Error saving config file")
+            
         appuifw2.app.menu_key_handler=None
         try:
             timer.cancel()
@@ -2400,11 +2995,14 @@ def quit():
             appuifw2.note(u"Can't cancel timer")
         try:
             del inboxx
+            #snd.close()
         except:
             appufiw2.note(u"Can't del inbox object")
+        
         #appuifw2.app.set_exit()
         try:
             #envy.is_app_system(0)
+            onstandby=0
             if (appswitch.fg_appname()==u'IdeaList'):
                 appuifw2.app.set_exit()
             app_lock.signal()
@@ -2476,7 +3074,7 @@ def setHours():
 def website():
     e32.start_exe('BrowserNG.exe', ' "4 http://www.masteranza.wordpress.com/ 1"', 1)
 
-def catconfig():
+def categoryConfig():
     global ideacat
     appuifw2.app.screen='normal'
     b=[]
@@ -2488,7 +3086,7 @@ def catconfig():
         d = appuifw2.popup_menu([u"Red",u"Green",u"Blue",u"Yellow",u"Sea",u"Violet",u"Black"], u"Choose:")
         if d!=None:
             ideacat[a][1]=colors[d]
-        catconfig()
+        categoryConfig()
     appuifw2.app.screen='full'
     
 def mainMenu():
@@ -2501,8 +3099,8 @@ def mainMenu():
     img.rectangle((20+w/4,h/2-w/4+20,w-20-w/4,h/2+w/4-20),outline=(200,200,200), width=4)
     img.text((w/2-12,h/2+5),u"Edit",fill=(255,255,255), font=currentfont)
     img.text((w/2-10,h/2-w/4+10),u"New",fill=(255,255,255), font=currentfont)
-    img.text((w/4-4,h/2+5),u"List",fill=(255,255,255), font=currentfont)
-    img.text((w-10-w/4,h/2+5),u"Box",fill=(255,255,255), font=currentfont)
+    img.text((w/4-12,h/2+5),u"Sync",fill=(255,255,255), font=currentfont)
+    img.text((w-12-w/4,h/2+5),u"Todo",fill=(255,255,255), font=currentfont)
     img.text((w/2-20,h/2+w/4-5),u"Settings",fill=(255,255,255), font=currentfont)
     menu=1
     handleRedraw(None)
@@ -2510,7 +3108,7 @@ def mainMenu():
 def version():
     appuifw2.note(u"Idealist 1.1\nby Ranza's Research",'info')
 def shortcuts():
-    shortk=appuifw2.Text(text=u"Green Key - Quick Edit\nPencil Key - Enter Edit mode\nStar Key - Zoom in\nHash key - Zoom out\n1 - Jump to date\n2 - New Event\n3 - New Idea\n4 - Opens IdeaList\n5 - New Reminder\n6 - Opens Ideabox\n\nHowever if you're in edit mode the keys:\n2 & 0 - move selection quickly [30 min]\n5 & 8 - move selection slowly [1 min]")
+    shortk=appuifw2.Text(text=u"Green Key - Quick Edit\nPencil Key - Enter Edit mode\n1 - Jump to date\n2 - New Event\n3 - New Idea\n4 - Opens IdeaList\n5 - New Reminder\n6 - Opens Todo\n\nHowever if you're in edit mode the keys:\n2 & 0 - move selection quickly [30 min]\n5 & 8 - move selection slowly [1 min]")
     appuifw2.app.screen='normal'
     appuifw2.app.body=shortk
 
@@ -2540,7 +3138,7 @@ events=prepare(viewday)
 
     
 def draw(list):
-    global vadjust, newh, currentask, viewday, ideacat, hstart, hstop, annivs, w, h, currentday, logo, present, smslist, inHand, currentfont, weekday, days
+    global vadjust, newh, currentask, viewday, ideacat, hstart, hstop, annivs, w, h, currentday, logo, present, smsList, inHand, currentfont, weekday, days
     if events!=[[]]:
         for i in range(0,len(list)):
             #The height in pixels of an event
@@ -2566,9 +3164,9 @@ def draw(list):
                 img.rectangle((12,int(cc+difk*j+newh),w+100,int(cc+difk*(j+1)+newh)),fill=clor)
             if split==0:
                 split=1
-            img.rectangle((12,int(cc+hsize+difk+newh),w,int(cc+2*(hsize)+difk+newh)), fill=clor)
+            img.rectangle((12,int(cc+hsize+difk+newh),w,int(cc+2*(hsize)+newh)), fill=clor)
             img.line((12,cc+newh,w,cc+newh), outline=(30,30,30), width=1)
-            img.line((12,cc+newh+2*(hsize)+difk,w,cc+newh+2*(hsize)+difk), outline=(30,30,30), width=1)
+            img.line((12,cc+newh+2*(hsize),w,cc+newh+2*(hsize)), outline=(30,30,30),width=1)
             #img.line((12,int(cc+split*difk+newh),w,int(cc+split*difk+newh)), outline=(100,100,100), width=1)
             category=list[i][5]
             
@@ -2634,6 +3232,7 @@ def draw(list):
     
         
 def drawSms():
+    global smsList, remind, soundList, sound, message, bell, viewday, hstart, hstop, vadjust, newh
     #draws the hours line
     img.rectangle((0,1,12,h),fill=(0,0,0))
     for i in range(0,hstop-hstart+1):
@@ -2645,11 +3244,17 @@ def drawSms():
             img.line((10,(int(y[0])+(int(y[1])*1./60)-hstart)*vadjust+newh,13,(int(y[0])+(int(y[1])*1./60)-hstart)*vadjust+newh),outline = (250,250,250), width = 2)
             img.blit(bell, target=(0,(int(y[0])+(int(y[1])*1./60)-hstart)*vadjust+newh))
     #Draws Sms icons
-    if len(smslist) > 0:
-        for y in smslist:
+    if len(smsList) > 0:
+        for y in smsList:
             if (y[0]-viewday)>0 and (y[0]-viewday)<3600*24:
                 img.line((10,((y[0]-viewday)/3600-hstart)*vadjust+newh,16,((y[0]-viewday)/3600-hstart)*vadjust+newh),outline = (250,250,100), width = 2)
                 img.blit(message, target=(0,((y[0]-viewday)/3600-hstart)*vadjust+newh))
+    #Draws voice note icons
+    if len(soundList) > 0:
+        for y in soundList:
+            if (y[0]-viewday)>0 and (y[0]-viewday)<3600*24:
+                img.line((10,((y[0]-viewday)/3600-hstart)*vadjust+newh,16,((y[0]-viewday)/3600-hstart)*vadjust+newh),outline = (250,250,100), width = 2)
+                img.blit(sound, target=(0,((y[0]-viewday)/3600-hstart)*vadjust+newh))
 
 def drawSignal():
     
@@ -2684,14 +3289,14 @@ def drawSignal():
     minutess=str(minutess)
     if len(minutess)==1:
         minutess="0"+minutess
-    img.text((w-30,h), unicode(hourr+":"+minutess), font=currentfont ,fill=(245,245,245))
+    img.text((w-30,h-2), unicode(hourr+":"+minutess), font=currentfont ,fill=(245,245,245))
     
     if missedcalls==1:
-        img.blit(phone, target=(w-57,h-10))
+        img.blit(phone, target=(w-57,h-endh))
     if unreadsms==1:
-        img.blit(sms, target=(w-72,h-10))
+        img.blit(sms, target=(w-72,h-endh))
     if xprof:
-        img.blit(silence, target=(w-42,h-10))
+        img.blit(silence, target=(w-42,h-endh))
     
     all=u" " + unicode(days[weekday])
     if int(-(currentday-viewday)/(3600*24))==0:
@@ -2790,11 +3395,11 @@ def drawAdjust():
         img.line((12,(events[selected][0]+(events[selected][1]*1./60)-hstart)*vadjust+newh  ,w,(events[selected][0]+(events[selected][1]*1./60)-hstart)*vadjust+newh ), outline = (0,150,0), width = 3)
     
     
-def drawHalf():
+def drawHalf(text=u"Move"):
     global eventCopy, colors, ideacat, hstart, hstop, vadjust, newh,w,h, selected, events
     drawSignal()
     img.rectangle((12,h-20,90,h-10),fill=(0,0,0))
-    img.text((12,h-10),u"Move mode on",fill=(255,255,255))
+    img.text((12,h-10),text+u" mode on",fill=(255,255,255))
     colisions= checkColisions()
     if len(colisions)==0:
         color=colors[12]
@@ -2808,8 +3413,23 @@ def drawHalf():
         category=ideacat[int(category)][0]
     except:
         category=eventCopy[5]
-    img.rectangle((w/2,(eventCopy[0]+(eventCopy[1]*1./60)-hstart)*vadjust+newh,w,(eventCopy[2]+ (eventCopy[3]*1./60)-hstart)*vadjust+newh), fill=color)
-    img.text((w/2 + 2,(eventCopy[0]+(eventCopy[1]*1./60)-hstart)*vadjust+10+newh), unicode(str(eventCopy[0]) +":" + str(eventCopy[1])+ "-" + str(eventCopy[2]) +":" + str(eventCopy[3])+ " "+ eventCopy[4] +"| " + category), fill = colors[4])
+    
+    #difk=(eventCopy[2]+(eventCopy[3]*1./60)-eventCopy[0]+(eventCopy[1]*1./60))*vadjust
+    
+    cc=(eventCopy[0]+(eventCopy[1]*1./60)-hstart)*vadjust
+    
+    #split=difk/3.0 #wsp dobrany eksperymentalnie
+    #difk=int(difk/split)
+    #split=int(split)
+    #else:
+    #    split=2
+    #try: 
+    #    for j in range(0,split-1):
+    #        img.rectangle((w/2,int(cc+difk*j+newh),w,int(cc+difk*(j+1)+newh)), fill=tuple([x+((j+1)*(80/split)) for x in color]))
+    #except:
+    #    appuifw2.note(u"error")
+    img.rectangle((w/2,cc+newh,w,(eventCopy[2]+(eventCopy[3]*1./60)-hstart)*vadjust+newh), fill=color)
+    img.text((w/2 + 2,cc+10+newh), unicode(str(eventCopy[0]) +":" + str(eventCopy[1])+ "-" + str(eventCopy[2]) +":" + str(eventCopy[3])+ " "+ eventCopy[4] +"| " + category), fill = colors[4])
     
 def drawOutline():
     global events, selected,w,h
@@ -2855,4 +3475,9 @@ drawRectangle(events)
 
 watchout()
 handleRedraw(None)
+
+
+onstandby=True
+drawOnStandby()
+
 app_lock.wait()
