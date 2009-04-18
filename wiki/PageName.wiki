@@ -2,8 +2,8 @@
 =How to install Idealist=
 
 
-  #Goto https://www.symbiansigned.com/app/page/public/openSignedOnline.do
-  #Sign a proper UltraPyModulePack v3.0.1 for your phone
-  #Sign Idealist
-  #Install a proper UltraPyModulePack v3.0.1 
-  #Install Idealist
+  # Goto https://www.symbiansigned.com/app/page/public/openSignedOnline.do
+  # Sign a proper UltraPyModulePack v3.0.1 for your phone
+  # Sign Idealist
+  # Install a proper UltraPyModulePack v3.0.1 
+  # Install Idealist
