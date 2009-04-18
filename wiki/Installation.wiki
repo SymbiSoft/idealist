@@ -1,27 +1,9 @@
 #labels Featured,Installation
-This short article will tell you how to install Idealist
-I don't take responsibility for any unwanted effects of following this instruction.
+=How to install Idealist=
 
-== Requierements ==
 
- * S60v3 Nokia device (not known if it would work on other devices)
- * PyS60 1.38 and higher (currently IdeaList doesn't seem to work with 1.9 version)
- * Hacked symbian system or a full capabilities certificate.
- * IdeaList.rar package
-
-== Details ==
-
- # You've to have your phone hacked or Idealist signed, so that idealist can use all the capabilities  of your symbian device. 
- # Install PyS60
- # Unrar IdeaList.rar
- # Install Idealist.sis on C: drive
- # Send root.rar to your phone memory and extract it (using Xplore for example) to your C:  drive, overwritting all the files.
- # Run Idealist
-
-It needs so much efford to install, because basicly I don't have money to pay for the developer certificate.
-
-However there are some other ways than hacking your phone like signing:
-
-To sign idealist you'll need a certificate, though you may find this site usefull: http://cer.s603rd.cn/ , go there and:
-1.enter Your IMEI in box and verify. code, shown on right, and push button (it's submit ) It takes one day to receive. on next day go to http://cer.s603rd.cn/ again and enter same info (IMEI), You will be redirected to links, just click on first (look below in red circle), it will download Your cert. and save it to phone.
-2. Download [s60SignSis_V1.0.SIS http://idealist.googlecode.com/svn/tools/s60SignSis_V1.0.SIS] install and choose Your received cert.. Now You can easy sign files.
+  # Goto https://www.symbiansigned.com/app/page/public/openSignedOnline.do
+  # Sign a proper UltraPyModulePack v3.0.1 for your phone
+  # Sign Idealist
+  # Install a proper UltraPyModulePack v3.0.1 
+  # Install Idealist
