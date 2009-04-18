@@ -3,7 +3,9 @@
 
 
   # Goto https://www.symbiansigned.com/app/page/public/openSignedOnline.do
+  # Sign Python 1.45 final (pys60)
   # Sign a proper UltraPyModulePack v3.0.1 for your phone
   # Sign Idealist
+  # Install Python 1.45 final
   # Install a proper UltraPyModulePack v3.0.1 
   # Install Idealist
