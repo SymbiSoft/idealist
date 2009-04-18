@@ -1,0 +1,11 @@
+#summary One-sentence summary of this page.
+
+= Introduction =
+
+Add your content here.
+
+
+1. Sign UltraPyModulePack v3.0.1 with the obtained certificate
+2. Sign Idealist with the obtain certificate
+3. Install a proper UltraPyModulePack v3.0.1 
+4. Install Idealist
