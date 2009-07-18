@@ -3995,7 +3995,8 @@ def update():
     urllib.urlretrieve(url, tempfile)
     apo.stop()
     appuifw2.note(u"Succesfuly downloaded! Proceed the instalation process", "info")
-    execfile(tempfile)
+    envy.set_app_system(0)
+    e32.start_exe(tempfile,'',1)
     #e32.ao_sleep(1)
     #quit()
     
