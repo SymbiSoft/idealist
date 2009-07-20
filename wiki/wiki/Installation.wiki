@@ -1,0 +1,17 @@
+#labels Featured,Installation
+=How to install Idealist=
+
+
+  # Goto *
+  # Sign Python 1.45 final (pys60)
+  # Sign a proper UltraPyModulePack v3.0.1 for your phone
+  # Sign Idealist
+  # Install Python 1.45 final
+  # Install a proper UltraPyModulePack v3.0.1 
+  # Install Idealist
+
+
+
+* To sign idealist you'll need a certificate, though you may find this site usefull: http://cer.s603rd.cn/ , go there and:
+  # Enter Your IMEI in box and verify. code, shown on right, and push button (it's submit ) It takes one day to receive. on next day go to http://cer.s603rd.cn/ again and enter same info (IMEI), You will be redirected to links, just click on first (look below in red circle), it will download Your cert. and save it to phone.
+  # Download [s60SignSis_V1.0.SIS http://idealist.googlecode.com/svn/tools/s60SignSis_V1.0.SIS] install and choose Your received cert.. Now You can easy sign files.

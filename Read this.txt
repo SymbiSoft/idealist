@@ -1,0 +1,12 @@
+Welcome in Idealist SVN
+
+Short instruction what does every folder hold-on:
+
+idealist - the current (newest source code of idealist)
+libraries - the modules and libraries needed to run idealist (not packed)
+old - old versions of idealist
+public - current build of idealist.sis and packages
+resources - resources needed for idealist like icon and about.txt file
+wiki - holds wiki text files
+
+others - I berely use
