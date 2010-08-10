@@ -1,4 +1,4 @@
-#labels Featured,Installation
+#labels Featured,Installation,Deprecated
 This short article will tell you how to install Idealist
 I don't take responsibility for any unwanted effects of following this instruction.
 
